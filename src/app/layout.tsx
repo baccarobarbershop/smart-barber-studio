@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ClientRecognitionHeader } from "@/components/navigation/ClientRecognitionHeader";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Smart Barber Studio | Premium Grooming Experience",
@@ -40,6 +41,7 @@ export default function RootLayout({
         <ClientRecognitionHeader />
         {children}
         <PwaInstallPrompt />
+        <SpeedInsights />
       </body>
     </html>
   );
