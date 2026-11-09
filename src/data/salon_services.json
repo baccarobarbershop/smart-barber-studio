@@ -1,0 +1,66 @@
+[
+  {
+    "id": "srv_taglio_shampoo",
+    "name": "Taglio + Shampoo",
+    "price_cents": 1800,
+    "duration_minutes": 30,
+    "description": "Taglio uomo con lavaggio shampoo, rifinitura e styling finale.",
+    "enabled": true
+  },
+  {
+    "id": "srv_sopracciglia",
+    "name": "Sopracciglia",
+    "price_cents": 200,
+    "duration_minutes": 10,
+    "description": "Rifinitura e definizione delle sopracciglia.",
+    "enabled": true
+  },
+  {
+    "id": "srv_pensionati_taglio_shampoo",
+    "name": "Pensionati Taglio + Shampoo",
+    "price_cents": 1500,
+    "duration_minutes": 30,
+    "description": "Taglio capelli e shampoo dedicato ai pensionati.",
+    "enabled": true
+  },
+  {
+    "id": "srv_taglio_bimbo",
+    "name": "Taglio Bimbo (0-12 anni)",
+    "price_cents": 1000,
+    "duration_minutes": 20,
+    "description": "Taglio capelli per bambini fino a 12 anni.",
+    "enabled": true
+  },
+  {
+    "id": "srv_rasatura_testa_macchinetta",
+    "name": "Rasatura uniforme con macchinetta",
+    "price_cents": 1000,
+    "duration_minutes": 20,
+    "description": "Rasatura uniforme della testa a macchinetta.",
+    "enabled": true
+  },
+  {
+    "id": "srv_modellatura_barba",
+    "name": "Modellatura barba (e profili a rasoio)",
+    "price_cents": 1000,
+    "duration_minutes": 20,
+    "description": "Cura e modellatura della barba con rifinitura dei profili a rasoio.",
+    "enabled": true
+  },
+  {
+    "id": "srv_rasatura_barba_tradizionale",
+    "name": "Rasatura barba tradizionale",
+    "price_cents": 1000,
+    "duration_minutes": 20,
+    "description": "Rasatura completa della barba con panno caldo e rasoio a mano libera.",
+    "enabled": true
+  },
+  {
+    "id": "srv_rasatura_barba_macchinetta",
+    "name": "Rasatura barba uniforme con macchinetta",
+    "price_cents": 500,
+    "duration_minutes": 15,
+    "description": "Accorciatura e rasatura uniforme della barba con tagliacapelli a macchinetta.",
+    "enabled": true
+  }
+]
