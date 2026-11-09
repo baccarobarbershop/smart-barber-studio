@@ -524,10 +524,18 @@ export function ChatView({
               </Link>
             </div>
           ) : liveSession?.isBarberActive ? (
-            <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Barbiere Connesso</span>
-            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                await setBarberActiveStatus(activeSessionId, false);
+                setLiveSession((prev) => (prev ? { ...prev, isBarberActive: false } : null));
+              }}
+              title="Torna a parlare con l'Assistente Virtuale AI"
+              className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-amber-500/20 border border-emerald-500/40 hover:border-amber-500/50 text-emerald-300 hover:text-amber-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Torna all&apos;AI</span>
+            </button>
           ) : handoffSent ? (
             <button
               type="button"
@@ -604,7 +612,17 @@ export function ChatView({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Il Barbiere ha preso in carico la chat ed è in linea con te!</span>
           </span>
-          <span className="text-[10px] text-zinc-400">Scrivi pure qui sotto</span>
+          <button
+            type="button"
+            onClick={async () => {
+              await setBarberActiveStatus(activeSessionId, false);
+              setLiveSession((prev) => (prev ? { ...prev, isBarberActive: false } : null));
+            }}
+            className="text-[11px] text-zinc-300 hover:text-amber-300 underline font-semibold flex items-center gap-1 transition"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Torna all&apos;AI</span>
+          </button>
         </div>
       )}
 

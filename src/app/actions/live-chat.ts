@@ -56,10 +56,21 @@ function writeAllSessions(sessions: Record<string, LiveChatSession>) {
 export async function getLiveChatSession(sessionId: string): Promise<LiveChatSession | null> {
   if (!sessionId) return null;
   const sessions = readAllSessions();
-  if (sessions[sessionId]) return sessions[sessionId];
   const normalized = normalizePhoneDigits(sessionId);
-  if (normalized && sessions[normalized]) return sessions[normalized];
-  return null;
+  const session = sessions[sessionId] || (normalized ? sessions[normalized] : null);
+  if (!session) return null;
+
+  // Auto-chiusura automatica se la sessione con il barbiere è inattiva da più di 15 minuti
+  if (session.isBarberActive && session.updatedAt) {
+    const elapsedMinutes = (Date.now() - new Date(session.updatedAt).getTime()) / (1000 * 60);
+    if (elapsedMinutes > 15) {
+      session.isBarberActive = false;
+      session.handoffRequested = false;
+      writeAllSessions(sessions);
+    }
+  }
+
+  return session;
 }
 
 /**
