@@ -1,8 +1,7 @@
 "use server";
 
-import fs from "fs";
-import path from "path";
 import { normalizePhoneDigits } from "@/lib/phone";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface LiveChatMessage {
   id: string;
@@ -24,29 +23,54 @@ export interface LiveChatSession {
   updatedAt: string;
 }
 
-const DATA_FILE = path.join(process.cwd(), "src", "data", "live_conversations.json");
+const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
-function readAllSessions(): Record<string, LiveChatSession> {
+async function readAllSessions(): Promise<Record<string, LiveChatSession>> {
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, "utf-8");
-      return JSON.parse(raw);
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("business_settings")
+      .select("daily_schedules")
+      .eq("id", SETTINGS_ID)
+      .maybeSingle();
+
+    if (data?.daily_schedules && typeof data.daily_schedules === "object") {
+      const sched = data.daily_schedules as Record<string, unknown>;
+      if (sched._live_chat_sessions && typeof sched._live_chat_sessions === "object") {
+        return sched._live_chat_sessions as Record<string, LiveChatSession>;
+      }
     }
   } catch (err) {
-    console.error("Errore lettura live_conversations.json:", err);
+    console.error("Errore lettura live chat da Supabase:", err);
   }
   return {};
 }
 
-function writeAllSessions(sessions: Record<string, LiveChatSession>) {
+async function writeAllSessions(sessions: Record<string, LiveChatSession>): Promise<void> {
   try {
-    const dir = path.dirname(DATA_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(sessions, null, 2), "utf-8");
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("business_settings")
+      .select("daily_schedules")
+      .eq("id", SETTINGS_ID)
+      .maybeSingle();
+
+    const currentSched =
+      data?.daily_schedules && typeof data.daily_schedules === "object"
+        ? (data.daily_schedules as Record<string, unknown>)
+        : {};
+
+    const updatedSched = {
+      ...currentSched,
+      _live_chat_sessions: sessions,
+    };
+
+    await admin
+      .from("business_settings")
+      .update({ daily_schedules: updatedSched })
+      .eq("id", SETTINGS_ID);
   } catch (err) {
-    console.error("Errore scrittura live_conversations.json:", err);
+    console.error("Errore salvataggio live chat su Supabase:", err);
   }
 }
 
@@ -55,7 +79,7 @@ function writeAllSessions(sessions: Record<string, LiveChatSession>) {
  */
 export async function getLiveChatSession(sessionId: string): Promise<LiveChatSession | null> {
   if (!sessionId) return null;
-  const sessions = readAllSessions();
+  const sessions = await readAllSessions();
   const normalized = normalizePhoneDigits(sessionId);
   const session = sessions[sessionId] || (normalized ? sessions[normalized] : null);
   if (!session) return null;
@@ -66,7 +90,7 @@ export async function getLiveChatSession(sessionId: string): Promise<LiveChatSes
     if (elapsedMinutes > 15) {
       session.isBarberActive = false;
       session.handoffRequested = false;
-      writeAllSessions(sessions);
+      await writeAllSessions(sessions);
     }
   }
 
@@ -84,7 +108,7 @@ export async function initOrUpdateLiveChatSession(input: {
   handoffRequested?: boolean;
 }): Promise<LiveChatSession> {
   const { sessionId, clientName, clientPhone, initialMessages, handoffRequested } = input;
-  const sessions = readAllSessions();
+  const sessions = await readAllSessions();
 
   const now = new Date().toISOString();
   let session = sessions[sessionId];
@@ -122,7 +146,7 @@ export async function initOrUpdateLiveChatSession(input: {
   }
 
   sessions[sessionId] = session;
-  writeAllSessions(sessions);
+  await writeAllSessions(sessions);
   return session;
 }
 
@@ -140,7 +164,7 @@ export async function sendLiveChatMessage(input: {
     return { success: false, error: "Dati mancanti" };
   }
 
-  const sessions = readAllSessions();
+  const sessions = await readAllSessions();
   const normalizedKey = normalizePhoneDigits(sessionId) || sessionId;
   let targetKey = sessionId;
   let session = sessions[sessionId];
@@ -180,7 +204,7 @@ export async function sendLiveChatMessage(input: {
   }
 
   sessions[targetKey] = session;
-  writeAllSessions(sessions);
+  await writeAllSessions(sessions);
 
   return { success: true, message: newMsg, session };
 }
@@ -192,7 +216,7 @@ export async function setBarberActiveStatus(
   sessionId: string,
   isActive: boolean
 ): Promise<{ success: boolean; session?: LiveChatSession; error?: string }> {
-  const sessions = readAllSessions();
+  const sessions = await readAllSessions();
   const normalizedKey = normalizePhoneDigits(sessionId) || sessionId;
   let targetKey = sessionId;
   let session = sessions[sessionId];
@@ -228,7 +252,7 @@ export async function setBarberActiveStatus(
 
   session.updatedAt = now;
   sessions[targetKey] = session;
-  writeAllSessions(sessions);
+  await writeAllSessions(sessions);
 
   return { success: true, session };
 }

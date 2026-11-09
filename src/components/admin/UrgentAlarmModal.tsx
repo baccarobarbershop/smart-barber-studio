@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { acknowledgeAlert } from "@/app/actions/alerts";
+import { acknowledgeAlert, fetchPendingAlerts } from "@/app/actions/alerts";
 import type { UrgentAlert } from "@/types/database";
 import { BellRing, CheckCircle, Volume2, VolumeX, ShieldAlert, MessageSquare } from "lucide-react";
 
@@ -132,6 +132,38 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
       supabase.removeChannel(channel);
     };
   }, [alerts]);
+
+  // Polling affidabile ogni 2 secondi per gli allarmi pendenti: rileva allarmi in tempo reale su qualsiasi dispositivo senza refresh
+  useEffect(() => {
+    let isMounted = true;
+    const pollPendingAlerts = async () => {
+      try {
+        const pending = await fetchPendingAlerts();
+        if (isMounted) {
+          if (pending && pending.length > 0) {
+            setAlerts(pending);
+            setActiveAlert((prev) => {
+              if (prev && pending.some((a) => a.id === prev.id)) return prev;
+              return pending[0];
+            });
+          } else {
+            setAlerts([]);
+            setActiveAlert(null);
+          }
+        }
+      } catch (err) {
+        // ignora
+      }
+    };
+
+    pollPendingAlerts();
+    const interval = setInterval(pollPendingAlerts, 2000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Handler del pulsante fisico "PRESO IN CARICO"
   const handleAcknowledge = async () => {
