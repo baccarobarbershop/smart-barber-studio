@@ -158,42 +158,26 @@ export default function Home() {
           </div>
 
           {/* Footer info con privacy e lucchetto discreto per lo staff */}
-          <div className="pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-500">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setSalonModalTab("hours");
-                  setIsSalonModalOpen(true);
-                }}
-                className="flex items-center gap-1.5 hover:text-amber-400 transition"
-              >
-                <Clock className="w-3 h-3 text-amber-400" />
-                <span>Orari Salone</span>
-              </button>
-
-              <span>•</span>
-
+          <div className="pt-4 mt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-500">
+            <div>
               <button
                 type="button"
                 onClick={() => setIsPrivacyOpen(true)}
-                className="hover:text-amber-400 transition"
+                className="hover:text-amber-400 transition text-zinc-400"
               >
-                Privacy (GDPR)
+                Informativa Privacy (GDPR)
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-amber-400/80 font-mono">App Salone</span>
-              {!isAdmin && (
-                <Link
-                  href="/admin/login"
-                  title="Area Riservata Staff"
-                  className="text-zinc-700 hover:text-amber-400 transition p-1"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                </Link>
-              )}
+            <div>
+              <Link
+                href="/admin/login"
+                title="Accesso riservato al personale del salone"
+                className="flex items-center gap-1.5 text-zinc-500 hover:text-amber-400 transition py-1 px-2 rounded-lg hover:bg-zinc-900"
+              >
+                <Lock className="w-3 h-3 text-zinc-400" />
+                <span>Area Salone</span>
+              </Link>
             </div>
           </div>
 

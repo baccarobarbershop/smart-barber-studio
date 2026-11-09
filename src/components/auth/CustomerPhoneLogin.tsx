@@ -183,35 +183,28 @@ export function CustomerPhoneLogin({
         </button>
       </form>
 
-      {/* Consultazione libera Listino & Orari */}
+      {/* Consultazione libera Listino */}
       {onOpenSalonInfo && (
-        <div className="pt-2 flex items-center justify-center gap-3 text-xs">
+        <div className="pt-2 flex items-center justify-center text-xs">
           <button
             type="button"
             onClick={() => onOpenSalonInfo("services")}
-            className="text-zinc-400 hover:text-amber-400 font-semibold flex items-center gap-1.5 transition py-1 px-2.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800"
+            className="text-zinc-400 hover:text-amber-400 font-semibold flex items-center gap-1.5 transition py-1.5 px-3 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800"
           >
-            <Scissors className="w-3 h-3 text-amber-400" />
-            <span>Listino Prezzi</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenSalonInfo("hours")}
-            className="text-zinc-400 hover:text-amber-400 font-semibold flex items-center gap-1.5 transition py-1 px-2.5 rounded-lg bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-800"
-          >
-            <span>Orari del Salone</span>
+            <Scissors className="w-3.5 h-3.5 text-amber-400" />
+            <span>Consulta Listino Prezzi</span>
           </button>
         </div>
       )}
 
       {/* Opzioni secondarie: Accesso Staff */}
-      <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500">
+      <div className="pt-4 mt-2 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500">
         <span className="text-[11px] text-zinc-500">Accesso clienti riservato</span>
 
         <Link
           href="/admin/login"
           title="Accesso riservato al personale del salone"
-          className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-amber-400 transition"
+          className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-amber-400 transition py-1 px-2 rounded-lg hover:bg-zinc-900"
         >
           <Lock className="w-3 h-3 text-zinc-400" />
           <span>Area Salone</span>
