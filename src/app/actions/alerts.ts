@@ -88,7 +88,7 @@ export async function acknowledgeAlert(alertId: string): Promise<AcknowledgeAler
   if (cleanDigits.length >= 6) {
     const fullNumber = cleanDigits.startsWith("39") ? cleanDigits : `39${cleanDigits}`;
     const textMsg = encodeURIComponent(
-      `💈 Ciao ${customerName || "Gentile Cliente"}, sono il barbiere di Smart Barber Studio! Ho preso in carico la tua richiesta dalla chat. Dimmi pure come posso aiutarti.`
+      `*SMART BARBER STUDIO*\n\nCiao ${customerName || "Gentile Cliente"}, sono il barbiere! Ho preso in carico la tua richiesta dalla chat. Dimmi pure come posso aiutarti.`
     );
     directWhatsAppUrl = `https://wa.me/${fullNumber}?text=${textMsg}`;
   }

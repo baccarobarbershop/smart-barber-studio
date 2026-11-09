@@ -43,9 +43,13 @@ export async function sendWhatsAppOtpMessage(input: {
   const contacts = getSalonContacts();
   const salonWhatsApp = contacts.whatsapp_phone?.replace(/\D/g, "") || "393471234567";
 
-  const messageText = `💈 *Smart Barber Studio*\n\nCiao ${
-    customerName || "Cliente"
-  }, ecco il tuo codice di verifica per accedere:\n\n👉 *${otpCode}*\n\nValido per 5 minuti.`;
+  const messageText =
+    `*SMART BARBER STUDIO*\n` +
+    `Codice di Verifica\n\n` +
+    `Ciao ${customerName || "Cliente"},\n` +
+    `ecco il tuo codice per accedere e prenotare:\n\n` +
+    `*${otpCode}*\n\n` +
+    `⏱️ Valido per 5 minuti.`;
 
   const apiToken = process.env.WHATSAPP_CLOUD_API_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
