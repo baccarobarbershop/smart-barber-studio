@@ -30,6 +30,60 @@ const adminBruteForce = {
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
 /**
+ * Accesso diretto cliente con Nome e Numero di Telefono (Zero SMS/WhatsApp, zero attrito).
+ * Recupera o crea la tessera fedeltà su Supabase e sincronizza il profilo.
+ */
+export async function loginCustomerDirectly(
+  phone: string,
+  customerName: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  customer?: { phone: string; name: string; fidelityPoints: number };
+}> {
+  const cleanPhone = phone.trim().replace(/\s+/g, "");
+  const digitsOnly = cleanPhone.replace(/\D/g, "");
+
+  if (!cleanPhone || digitsOnly.length < 6) {
+    return { success: false, error: "Inserisci un numero di cellulare valido (almeno 6 cifre)." };
+  }
+
+  const trimmedName = customerName?.trim() || "";
+  if (!trimmedName || trimmedName.length < 2) {
+    return { success: false, error: "Inserisci il tuo Nome e Cognome per accedere." };
+  }
+
+  // Recupera o crea la tessera/profilo cliente tramite fidelity service
+  const cardRes = await getCustomerFidelityCard(cleanPhone);
+  let finalName = trimmedName;
+  let finalPoints = 0;
+
+  if (cardRes.success && cardRes.card) {
+    finalPoints = cardRes.card.fidelityPoints;
+  }
+
+  // Aggiorna o crea il profilo con il nome fornito
+  try {
+    const adminClient = createAdminClient();
+    await adminClient
+      .from("profiles")
+      .update({ full_name: trimmedName })
+      .eq("phone", cleanPhone);
+  } catch (e) {
+    console.warn("Impossibile aggiornare nome profilo:", e);
+  }
+
+  return {
+    success: true,
+    customer: {
+      phone: cleanPhone,
+      name: finalName,
+      fidelityPoints: finalPoints,
+    },
+  };
+}
+
+/**
  * Invia un codice di verifica gratuito tramite WhatsApp al numero di cellulare del cliente.
  * Restituisce anche il codice simulato e il link diretto WhatsApp per test istantanei gratuiti.
  */
