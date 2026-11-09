@@ -211,47 +211,63 @@ export function CustomerPhoneLogin({
       ) : (
         /* STEP 2: Inserimento Codice di Verifica WhatsApp */
         <form onSubmit={handleVerifyOtp} className="space-y-4 text-left">
-          {/* Banner WhatsApp per Verifica Immediata & Senza Account Meta */}
-          <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs space-y-3 shadow-sm">
-            <div className="flex items-center justify-between font-bold text-[12px]">
-              <span className="flex items-center gap-1.5">
+          {/* Banner Stato Invio Codice */}
+          {sentViaApi ? (
+            <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 text-xs space-y-2 shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-2 font-bold text-[13px] text-emerald-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
                 <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Codice OTP per {name}:</span>
-              </span>
-              {simulatedOtp && (
-                <span className="font-mono bg-emerald-400 text-zinc-950 px-2.5 py-1 rounded-lg text-sm font-black tracking-widest shadow">
-                  {simulatedOtp}
-                </span>
-              )}
-            </div>
-
-            {simulatedOtp && (
-              <button
-                type="button"
-                onClick={() => setOtp(simulatedOtp)}
-                className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow active:scale-[0.98]"
-              >
-                <span>⚡ Inserisci codice in 1 click ({simulatedOtp})</span>
-              </button>
-            )}
-
-            <div className="pt-1 border-t border-emerald-500/20 text-[11px] text-zinc-300 space-y-1.5">
-              <p className="text-zinc-400 text-[10px]">
-                Nessun account sviluppatore Meta necessario: il codice è pronto sopra, oppure aprilo su WhatsApp:
+                <span>Messaggio inviato su WhatsApp!</span>
+              </div>
+              <p className="text-zinc-300 text-xs leading-relaxed">
+                Abbiamo appena inviato il codice di sicurezza ufficiale al tuo numero <strong className="text-emerald-400 font-mono">+39 {phone}</strong>.
               </p>
-              {directWhatsAppUrl && (
-                <a
-                  href={directWhatsAppUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-1.5 px-3 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Apri WhatsApp Web / App (+39 {phone})</span>
-                </a>
-              )}
+              <p className="text-[11px] text-zinc-400 pt-1 border-t border-emerald-500/20">
+                Apri l&apos;applicazione WhatsApp sul tuo telefono e digita qui sotto il codice a 6 cifre ricevuto.
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs space-y-3 shadow-sm">
+              <div className="flex items-center justify-between font-bold text-[12px]">
+                <span className="flex items-center gap-1.5">
+                  <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Codice OTP per {name}:</span>
+                </span>
+                {simulatedOtp && (
+                  <span className="font-mono bg-emerald-400 text-zinc-950 px-2.5 py-1 rounded-lg text-sm font-black tracking-widest shadow">
+                    {simulatedOtp}
+                  </span>
+                )}
+              </div>
+
+              {simulatedOtp && (
+                <button
+                  type="button"
+                  onClick={() => setOtp(simulatedOtp)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow active:scale-[0.98]"
+                >
+                  <span>⚡ Inserisci codice in 1 click ({simulatedOtp})</span>
+                </button>
+              )}
+
+              <div className="pt-1 border-t border-emerald-500/20 text-[11px] text-zinc-300 space-y-1.5">
+                <p className="text-zinc-400 text-[10px]">
+                  Modalità sviluppo / test rapido: inserisci il codice sopra oppure aprilo su WhatsApp:
+                </p>
+                {directWhatsAppUrl && (
+                  <a
+                    href={directWhatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-1.5 px-3 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Apri WhatsApp Web / App (+39 {phone})</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
