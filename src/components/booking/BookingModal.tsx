@@ -25,6 +25,68 @@ interface BookingModalProps {
   autoCloseDelayMs?: number;
 }
 
+async function compressImageForUpload(file: File): Promise<File> {
+  // Se non è un'immagine o è già inferiore a 600KB, non comprimere
+  if (!file.type.startsWith("image/") || file.size < 600 * 1024) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = (e.target?.result as string) || "";
+    };
+
+    img.onload = () => {
+      const maxDim = 1600;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const compressed = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          resolve(compressed);
+        },
+        "image/jpeg",
+        0.82
+      );
+    };
+
+    img.onerror = () => resolve(file);
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 export function BookingModal({
   isOpen,
   onClose,
@@ -133,16 +195,22 @@ export function BookingModal({
       // Upload lookbook image se presente
       if (imageFile) {
         setUploadingImage(true);
-        const formData = new FormData();
-        formData.append("file", imageFile);
+        try {
+          const processedFile = await compressImageForUpload(imageFile);
+          const formData = new FormData();
+          formData.append("file", processedFile);
 
-        const uploadRes = await uploadLookbookImage(formData);
-        if (uploadRes.success && uploadRes.publicUrl) {
-          lookbookImageUrl = uploadRes.publicUrl;
-        } else if (uploadRes.error) {
-          console.warn("Upload foto non riuscito:", uploadRes.error);
+          const uploadRes = await uploadLookbookImage(formData);
+          if (uploadRes.success && uploadRes.publicUrl) {
+            lookbookImageUrl = uploadRes.publicUrl;
+          } else if (uploadRes.error) {
+            console.warn("Upload foto non riuscito:", uploadRes.error);
+          }
+        } catch (uploadErr) {
+          console.warn("Errore caricamento foto:", uploadErr);
+        } finally {
+          setUploadingImage(false);
         }
-        setUploadingImage(false);
       }
 
       // Esecuzione prenotazione deterministica con trattamento e prezzo specifico

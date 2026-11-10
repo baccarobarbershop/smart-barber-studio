@@ -30,7 +30,7 @@ export async function uploadLookbookImage(formData: FormData): Promise<UploadRes
     }
 
     const adminClient = createAdminClient();
-    const fileExt = file.name.split(".").pop() || "jpg";
+    const fileExt = (file.name || "photo.jpg").split(".").pop() || "jpg";
     const fileName = `lookbook_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const arrayBuffer = await file.arrayBuffer();
