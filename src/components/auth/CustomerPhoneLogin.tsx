@@ -207,7 +207,7 @@ export function CustomerPhoneLogin({
           className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-amber-400 transition py-1 px-2 rounded-lg hover:bg-zinc-900"
         >
           <Lock className="w-3 h-3 text-zinc-400" />
-          <span>Area Salone</span>
+          <span>Area Riservata</span>
         </Link>
       </div>
 

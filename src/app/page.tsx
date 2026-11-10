@@ -2,33 +2,25 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sparkles, Calendar, ShieldCheck, Clock, Scissors, CalendarCheck, Lock, LogOut } from "lucide-react";
+import { Sparkles, Calendar, Clock, Scissors, CalendarCheck, Lock } from "lucide-react";
 import { ManageAppointmentModal } from "@/components/booking/ManageAppointmentModal";
 import { CustomerPhoneLogin } from "@/components/auth/CustomerPhoneLogin";
 import { SalonServicesAndHoursModal } from "@/components/salon/SalonServicesAndHoursModal";
 import { PrivacyPolicyModal } from "@/components/legal/PrivacyPolicyModal";
-import { isAdminSession, logoutAdmin } from "@/app/actions/auth";
 
 export default function Home() {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isSalonModalOpen, setIsSalonModalOpen] = useState(false);
   const [salonModalTab, setSalonModalTab] = useState<"services" | "hours">("services");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [customerPhone, setCustomerPhone] = useState<string | null | undefined>(undefined);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   useEffect(() => {
-    isAdminSession().then(setIsAdmin);
     if (typeof window !== "undefined") {
       const savedPhone = localStorage.getItem("smart_barber_customer_phone");
       setCustomerPhone(savedPhone);
     }
   }, []);
-
-  const handleAdminLogout = async () => {
-    await logoutAdmin();
-    setIsAdmin(false);
-  };
 
   // Caricamento sessione iniziale (evita sfarfallio)
   if (customerPhone === undefined) {
@@ -135,26 +127,6 @@ export default function Home() {
               <span>I Miei Appuntamenti / Disdici</span>
             </button>
 
-            {/* 5. Dashboard Barbiere (Visibile ESCLUSIVAMENTE all'Admin autenticato) */}
-            {isAdmin && (
-              <div className="pt-2 flex items-center gap-2 animate-in fade-in duration-200">
-                <Link
-                  href="/admin"
-                  className="flex-1 py-3 px-4 rounded-2xl font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 flex items-center justify-center gap-2 transition text-xs shadow-md shadow-amber-500/10"
-                >
-                  <ShieldCheck className="w-4 h-4 text-amber-400" />
-                  <span>Gestione Salone Barbiere</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleAdminLogout}
-                  title="Esci dalla modalità gestione"
-                  className="p-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-red-400 border border-zinc-800 transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Footer info con privacy e lucchetto discreto per lo staff */}
@@ -176,7 +148,7 @@ export default function Home() {
                 className="flex items-center gap-1.5 text-zinc-500 hover:text-amber-400 transition py-1 px-2 rounded-lg hover:bg-zinc-900"
               >
                 <Lock className="w-3 h-3 text-zinc-400" />
-                <span>Area Salone</span>
+                <span>Area Riservata</span>
               </Link>
             </div>
           </div>
