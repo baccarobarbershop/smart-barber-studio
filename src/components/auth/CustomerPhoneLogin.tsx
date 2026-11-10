@@ -82,13 +82,15 @@ export function CustomerPhoneLogin({
       <div className="space-y-1.5">
         <span className="text-[11px] uppercase tracking-widest text-amber-400 font-extrabold flex items-center justify-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" />
-          Smart Barber Studio
+          Barberia &quot;Dal 1958&quot;
         </span>
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100">
-          Area <span className="gold-gradient-text">Cliente Esclusivo</span>
+          Barbershop <span className="gold-gradient-text">Roberto Baccaro</span>
         </h1>
         <p className="text-xs text-zinc-400 leading-relaxed max-w-xs mx-auto">
-          Inserisci Nome e Cellulare per verificare gli orari disponibili in tempo reale, prenotare e accumulare punti fedeltà.
+          C.so Orbassano 230/a, Torino (Presso &quot;Wild Effect&quot;)
+          <br />
+          <span className="text-zinc-500 text-[11px]">Orario 9:00 - 19:00 • Lunedì Chiuso • Tel. 331 81 76 178</span>
         </p>
       </div>
 

@@ -6,7 +6,7 @@ import { AdminDashboardClient } from "@/components/admin/AdminDashboardClient";
 import type { BusinessSettings, Appointment, UrgentAlert } from "@/types/database";
 
 export const metadata = {
-  title: "Dashboard Amministratore | Smart Barber Studio",
+  title: "Dashboard Amministratore | Barbershop Roberto Baccaro",
   description: "Gestione calendario, configurazione salone, carta fedeltà e allarmi in tempo reale.",
 };
 

@@ -45,13 +45,13 @@ export interface DaySchedule {
 export type WeeklySchedule = Record<number, DaySchedule>; // 0: Dom, 1: Lun, ..., 6: Sab
 
 export const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
-  1: { enabled: true, opening_time: "09:00", closing_time: "19:30", has_lunch_break: true, lunch_break_start: "13:00", lunch_break_end: "14:30" },
-  2: { enabled: true, opening_time: "09:00", closing_time: "19:30", has_lunch_break: true, lunch_break_start: "13:00", lunch_break_end: "14:30" },
-  3: { enabled: true, opening_time: "09:00", closing_time: "19:30", has_lunch_break: true, lunch_break_start: "13:00", lunch_break_end: "14:30" },
-  4: { enabled: true, opening_time: "09:00", closing_time: "19:30", has_lunch_break: true, lunch_break_start: "13:00", lunch_break_end: "14:30" },
-  5: { enabled: true, opening_time: "09:00", closing_time: "19:30", has_lunch_break: true, lunch_break_start: "13:00", lunch_break_end: "14:30" },
-  6: { enabled: true, opening_time: "08:30", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
-  0: { enabled: false, opening_time: "09:00", closing_time: "13:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
+  1: { enabled: false, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null }, // Lunedì chiuso
+  2: { enabled: true, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
+  3: { enabled: true, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
+  4: { enabled: true, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
+  5: { enabled: true, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
+  6: { enabled: true, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null },
+  0: { enabled: false, opening_time: "09:00", closing_time: "19:00", has_lunch_break: false, lunch_break_start: null, lunch_break_end: null }, // Domenica chiuso
 };
 
 export interface BarberService {

@@ -345,8 +345,8 @@ export async function cancelAppointmentByClient(input: {
     .single();
 
   const minCancellationHours = settings?.min_cancellation_hours ?? 2;
-  const salonPhone = settings?.salon_phone || "02 1234567";
-  const whatsappPhone = settings?.whatsapp_phone || "347 1234567";
+  const salonPhone = (settings as any)?.salon_phone || "331 81 76 178";
+  const whatsappPhone = (settings as any)?.whatsapp_phone || "331 81 76 178";
 
   // Calcolo ore mancanti all'appuntamento
   const aptDateTime = parse(
@@ -477,8 +477,8 @@ export async function rescheduleAppointmentByClient(input: {
     .single();
 
   const minCancellationHours = settings?.min_cancellation_hours ?? 2;
-  const salonPhone = settings?.salon_phone || "02 1234567";
-  const whatsappPhone = settings?.whatsapp_phone || "347 1234567";
+  const salonPhone = (settings as any)?.salon_phone || "331 81 76 178";
+  const whatsappPhone = (settings as any)?.whatsapp_phone || "331 81 76 178";
 
   const aptDateTime = parse(
     `${apt.appointment_date} ${apt.start_time.substring(0, 5)}`,

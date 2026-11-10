@@ -9,7 +9,7 @@ export function buildAppointmentWhatsAppUrl(details: {
   serviceName?: string;
   priceFormatted?: string;
 }): string {
-  const text = `💈 *Smart Barber Studio - Promemoria Prenotazione*\n\nGentile ${
+  const text = `💈 *Barbershop Roberto Baccaro - Barberia dal 1958*\n\nGentile ${
     details.customerName
   },\nil tuo appuntamento è confermato con successo:\n\n📅 Data: *${
     details.dateStr
@@ -17,7 +17,7 @@ export function buildAppointmentWhatsAppUrl(details: {
     details.serviceName || "Taglio Capelli"
   }* ${
     details.priceFormatted ? `(${details.priceFormatted})` : ""
-  }\n\n📍 Ti aspettiamo in salone! Per qualsiasi informazione o gestione rapida dell'appuntamento puoi accedere direttamente all'app.`;
+  }\n\n📍 Ti aspettiamo in salone in C.so Orbassano 230/a, Torino (Presso "Wild Effect"). Tel. 331 81 76 178.`;
 
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
@@ -38,13 +38,13 @@ export function buildReminderWhatsAppUrl(details: {
     cleanPhone = `39${cleanPhone}`;
   }
 
-  const text = `💈 *Smart Barber Studio - Promemoria Appuntamento*\n\nCiao ${
+  const text = `💈 *Barbershop Roberto Baccaro - Dal 1958*\n\nCiao ${
     details.customerName
   }! 👋\nTi ricordiamo con piacere il tuo appuntamento:\n\n📅 Data: *${
     details.dateStr
   }*\n⏰ Orario: *${details.timeStr}*${
     details.serviceName ? `\n✂️ Trattamento: *${details.serviceName}*` : ""
-  }\n\n📍 Ti aspettiamo in Salone!\nIn caso di imprevisto o necessità di modificare l'orario, puoi avvisarci direttamente rispondendo a questo messaggio.\nA presto! ✂️`;
+  }\n\n📍 Ti aspettiamo a Torino in C.so Orbassano 230/a (presso "Wild Effect")!\nIn caso di imprevisto o necessità di modificare l'orario, puoi avvisarci direttamente rispondendo a questo messaggio o al 331 81 76 178.\nA presto! ✂️`;
 
   if (cleanPhone) {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
@@ -81,7 +81,7 @@ export function buildBarberDailyAgendaWhatsAppUrl(params: {
   }
 
   const lines: string[] = [
-    `💈 *SMART BARBER STUDIO*`,
+    `💈 *BARBERSHOP ROBERTO BACCARO - Dal 1958*`,
     `📋 *Agenda di ${params.dateStr}*`,
     `──────────────────────────`,
   ];

@@ -48,7 +48,7 @@ function readLocalContacts(): { salon_phone: string; whatsapp_phone: string } {
   } catch (err) {
     console.error("Errore lettura local contacts:", err);
   }
-  return { salon_phone: "02 1234567", whatsapp_phone: "347 1234567" };
+  return { salon_phone: "331 81 76 178", whatsapp_phone: "331 81 76 178" };
 }
 
 function writeLocalContacts(contacts: { salon_phone?: string; whatsapp_phone?: string }) {
@@ -889,7 +889,7 @@ async function getAdminProfileUserId(adminClient: ReturnType<typeof createAdminC
     email: `staff_${Date.now()}@smartbarber.local`,
     email_confirm: true,
     user_metadata: {
-      full_name: "Smart Barber Studio",
+      full_name: "Barbershop Roberto Baccaro",
       phone: "BLOCCATO",
       role: "admin",
     },

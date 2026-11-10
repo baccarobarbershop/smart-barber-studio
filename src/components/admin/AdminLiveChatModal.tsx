@@ -153,7 +153,7 @@ export function AdminLiveChatModal({
     directWhatsAppUrl ||
     (cleanPhone
       ? `https://wa.me/${cleanPhone.startsWith("39") ? cleanPhone : `39${cleanPhone}`}?text=${encodeURIComponent(
-          `💈 Ciao ${clientName || ""}, sono il barbiere di Smart Barber Studio! Ho preso in carico la tua richiesta.`
+          `💈 Ciao ${clientName || ""}, sono Roberto di Barbershop Roberto Baccaro! Ho preso in carico la tua richiesta.`
         )}`
       : null);
 

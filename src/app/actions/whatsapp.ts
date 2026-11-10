@@ -10,7 +10,7 @@ function getSalonContacts() {
       return JSON.parse(fs.readFileSync(filePath, "utf-8"));
     }
   } catch {}
-  return { salon_phone: "02 1234567", whatsapp_phone: "347 1234567" };
+  return { salon_phone: "331 81 76 178", whatsapp_phone: "331 81 76 178" };
 }
 
 export interface WhatsAppSendResult {
@@ -44,7 +44,7 @@ export async function sendWhatsAppOtpMessage(input: {
   const salonWhatsApp = contacts.whatsapp_phone?.replace(/\D/g, "") || "393471234567";
 
   const messageText =
-    `*SMART BARBER STUDIO*\n` +
+    `*BARBERSHOP ROBERTO BACCARO - Dal 1958*\n` +
     `Codice di Verifica\n\n` +
     `Ciao ${customerName || "Cliente"},\n` +
     `ecco il tuo codice per accedere e prenotare:\n\n` +
@@ -119,7 +119,7 @@ export async function sendWhatsAppAdminAlert(details: {
     barberPhone = `39${barberPhone}`;
   }
 
-  const messageText = `💈 *NUOVA PRENOTAZIONE - Smart Barber Studio*\n\n👤 Cliente: *${details.customerName}*\n📞 Tel: *${details.customerPhone}*\n📅 Data: *${details.dateStr}*\n⏰ Ore: *${details.timeStr}*\n✂️ Trattamento: *${details.serviceName || "Taglio Capelli"}* ${details.priceEur ? `(€${details.priceEur})` : ""}\n💳 Pagamento: *${details.paymentMethod === "in_app" ? "Pagato in App" : "Paga in Salone"}*\n\nL'agenda e la disponibilità sono state aggiornate automaticamente.`;
+  const messageText = `💈 *NUOVA PRENOTAZIONE - Barbershop Roberto Baccaro*\n\n👤 Cliente: *${details.customerName}*\n📞 Tel: *${details.customerPhone}*\n📅 Data: *${details.dateStr}*\n⏰ Ore: *${details.timeStr}*\n✂️ Trattamento: *${details.serviceName || "Taglio Capelli"}* ${details.priceEur ? `(€${details.priceEur})` : ""}\n💳 Pagamento: *${details.paymentMethod === "in_app" ? "Pagato in App" : "Paga in Salone"}*\n\nL'agenda e la disponibilità sono state aggiornate automaticamente.`;
 
   const apiToken = process.env.WHATSAPP_CLOUD_API_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -176,7 +176,7 @@ export async function sendWhatsAppCancellationIntentAlert(details: {
     barberPhone = `39${barberPhone}`;
   }
 
-  const messageText = `🚨 *RICHIESTA DISDETTA CON POCO PREAVVISO - Smart Barber Studio*\n\n` +
+  const messageText = `🚨 *RICHIESTA DISDETTA CON POCO PREAVVISO - Barbershop Roberto Baccaro*\n\n` +
     `👤 Cliente: *${details.customerName}*\n` +
     `📞 Tel: *${details.customerPhone}*\n` +
     `📅 Appuntamento: *${details.dateStr}* ore *${details.timeStr}*\n` +

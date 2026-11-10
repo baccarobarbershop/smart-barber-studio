@@ -30,7 +30,7 @@ function readLocalContacts(): { salon_phone: string; whatsapp_phone: string } {
   } catch (err) {
     console.error("Errore lettura local contacts:", err);
   }
-  return { salon_phone: "02 1234567", whatsapp_phone: "347 1234567" };
+  return { salon_phone: "331 81 76 178", whatsapp_phone: "331 81 76 178" };
 }
 
 export interface SalonPublicInfo {
@@ -51,8 +51,8 @@ export async function getSalonPublicInfo(): Promise<SalonPublicInfo> {
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
   const localContacts = readLocalContacts();
-  let salonPhone = localContacts.salon_phone || "02 1234567";
-  let whatsappPhone = localContacts.whatsapp_phone || "347 1234567";
+  let salonPhone = localContacts.salon_phone || "331 81 76 178";
+  let whatsappPhone = localContacts.whatsapp_phone || "331 81 76 178";
 
   let services: BarberService[] = DEFAULT_SERVICES;
   const localServices = readLocalServices();
@@ -75,8 +75,14 @@ export async function getSalonPublicInfo(): Promise<SalonPublicInfo> {
       .single();
 
     if (settings) {
-      if (settings.salon_phone) salonPhone = settings.salon_phone;
-      if (settings.whatsapp_phone) whatsappPhone = settings.whatsapp_phone;
+      if ((settings as any).salon_phone) salonPhone = (settings as any).salon_phone;
+      if ((settings as any).whatsapp_phone) whatsappPhone = (settings as any).whatsapp_phone;
+      if ((settings.daily_schedules as any)?._contacts?.salon_phone) {
+        salonPhone = (settings.daily_schedules as any)._contacts.salon_phone;
+      }
+      if ((settings.daily_schedules as any)?._contacts?.whatsapp_phone) {
+        whatsappPhone = (settings.daily_schedules as any)._contacts.whatsapp_phone;
+      }
       if (typeof settings.max_advance_booking_days === "number") {
         maxAdvanceDays = settings.max_advance_booking_days;
       }

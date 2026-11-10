@@ -60,13 +60,15 @@ export default function Home() {
 
           <div className="space-y-1.5">
             <span className="text-[11px] uppercase tracking-widest text-amber-400 font-extrabold">
-              Luxury Grooming Experience
+              Barberia &quot;Dal 1958&quot; • Presso &quot;Wild Effect&quot;
             </span>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-zinc-100">
-              Smart <span className="gold-gradient-text">Barber Studio</span>
+              Barbershop <span className="gold-gradient-text">Roberto Baccaro</span>
             </h1>
             <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-              Assistente virtuale intelligente, prenotazioni senza attese e gestione esclusiva per il salone.
+              C.so Orbassano 230/a, Torino • Tel. 331 81 76 178
+              <br />
+              <span className="text-zinc-500 text-xs">Orario 9:00 - 19:00 • Lunedì Chiuso • È gradito l&apos;appuntamento</span>
             </p>
           </div>
 

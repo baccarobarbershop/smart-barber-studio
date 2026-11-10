@@ -2,7 +2,7 @@ import { ChatView } from "@/components/chat/ChatView";
 import { Suspense } from "react";
 
 export const metadata = {
-  title: "Chat Virtual Assistant | Smart Barber Studio",
+  title: "Chat Prenotazioni | Barbershop Roberto Baccaro",
   description: "Prenota il tuo appuntamento parlando direttamente con l'assistente virtuale.",
 };
 

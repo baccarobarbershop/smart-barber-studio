@@ -275,8 +275,8 @@ export function ChatView({
   const [handoffSent, setHandoffSent] = useState(false);
   const [handoffLoading, setHandoffLoading] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [salonPhone, setSalonPhone] = useState("02 1234567");
-  const [whatsappPhone, setWhatsappPhone] = useState("347 1234567");
+  const [salonPhone, setSalonPhone] = useState("331 81 76 178");
+  const [whatsappPhone, setWhatsappPhone] = useState("331 81 76 178");
 
   useEffect(() => {
     // Caricamento recapiti configurati per Chiama e WhatsApp
@@ -507,7 +507,7 @@ export function ChatView({
             <h2 className="text-xs sm:text-sm font-bold text-zinc-100 truncate tracking-tight">
               {isBarber
                 ? `Chat con ${clientNameParam || liveSession?.clientName || "Cliente"}`
-                : "Smart Barber Studio"}
+                : "Barbershop Roberto Baccaro"}
             </h2>
             <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
@@ -516,7 +516,7 @@ export function ChatView({
                   ? "Connesso con il Cliente"
                   : liveSession?.isBarberActive
                   ? "Barbiere in Linea"
-                  : "Assistente Virtuale"}
+                  : "Barberia \"Dal 1958\" • Torino"}
               </span>
             </p>
           </div>
@@ -603,7 +603,7 @@ export function ChatView({
             {clientPhoneParam && (
               <>
                 <a
-                  href={`https://wa.me/${clientPhoneParam.replace(/\D/g, "").startsWith("39") ? clientPhoneParam.replace(/\D/g, "") : `39${clientPhoneParam.replace(/\D/g, "")}`}?text=${encodeURIComponent(`💈 Ciao ${clientNameParam || ""}, sono il barbiere di Smart Barber Studio! Ho preso in carico la tua richiesta.`)}`}
+                  href={`https://wa.me/${clientPhoneParam.replace(/\D/g, "").startsWith("39") ? clientPhoneParam.replace(/\D/g, "") : `39${clientPhoneParam.replace(/\D/g, "")}`}?text=${encodeURIComponent(`💈 Ciao ${clientNameParam || ""}, sono Roberto di Barbershop Roberto Baccaro! Ho preso in carico la tua richiesta.`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1.5 transition shadow"
@@ -759,11 +759,11 @@ export function ChatView({
                 <p>
                   {customerName ? (
                     <>
-                      Ciao <strong className="text-amber-400">{customerName}</strong>, benvenuto a <strong>Smart Barber Studio</strong>! Posso verificare gli orari in tempo reale e prenotare il tuo appuntamento.
+                      Ciao <strong className="text-amber-400">{customerName}</strong>, benvenuto a <strong>Barbershop Roberto Baccaro</strong> (Barberia dal 1958, C.so Orbassano 230/a)! Posso verificare gli orari in tempo reale e prenotare il tuo appuntamento.
                     </>
                   ) : (
                     <>
-                      Benvenuto a <strong>Smart Barber Studio</strong>! Posso verificare gli orari in tempo reale e prenotare il tuo appuntamento.
+                      Benvenuto a <strong>Barbershop Roberto Baccaro</strong> (Barberia dal 1958, C.so Orbassano 230/a)! Posso verificare gli orari in tempo reale e prenotare il tuo appuntamento.
                     </>
                   )}
                 </p>

@@ -139,7 +139,7 @@ export async function initOrUpdateLiveChatSession(input: {
     session.messages = initialMessages.map((m, idx) => ({
       id: `${Date.now()}_${idx}`,
       senderRole: m.role === "user" ? "client" : "assistant",
-      senderName: m.role === "user" ? session.clientName : "Smart Barber AI",
+      senderName: m.role === "user" ? session.clientName : "Barbershop Baccaro AI",
       content: m.content,
       timestamp: now,
     }));

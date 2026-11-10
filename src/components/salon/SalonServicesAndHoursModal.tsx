@@ -52,8 +52,8 @@ export function SalonServicesAndHoursModal({
                 fidelityRewardDescription: "",
                 fidelityTargetPoints: 10,
                 basePriceCents: 1800,
-                salonPhone: "02 1234567",
-                whatsappPhone: "347 1234567",
+                salonPhone: "331 81 76 178",
+                whatsappPhone: "331 81 76 178",
               } as unknown as SalonPublicInfo)
         );
       }
@@ -86,8 +86,8 @@ export function SalonServicesAndHoursModal({
                     fidelityRewardDescription: "",
                     fidelityTargetPoints: 10,
                     basePriceCents: 1800,
-                    salonPhone: "02 1234567",
-                    whatsappPhone: "347 1234567",
+                    salonPhone: "331 81 76 178",
+                    whatsappPhone: "331 81 76 178",
                   } as unknown as SalonPublicInfo)
             );
           }
@@ -124,7 +124,7 @@ export function SalonServicesAndHoursModal({
         <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between shrink-0">
           <div>
             <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400">
-              Smart Barber Studio
+              Barbershop Roberto Baccaro • Barberia &quot;Dal 1958&quot;
             </span>
             <h2 className="text-lg font-bold text-zinc-100 flex items-center gap-2">
               {activeTab === "services" ? (
@@ -253,7 +253,9 @@ export function SalonServicesAndHoursModal({
             /* ORARI DI APERTURA & FERIE */
             <div className="space-y-4">
               <p className="text-xs text-zinc-400">
-                Riceviamo solo su appuntamento per garantirti la massima puntualità, privacy e comfort in salone.
+                Riceviamo a Torino in C.so Orbassano 230/a (presso &quot;Wild Effect&quot;). Tel. 331 81 76 178.
+                <br />
+                <span className="text-zinc-500 text-[11px]">È gradito l&apos;appuntamento per garantirti la massima puntualità e cura del dettaglio.</span>
               </p>
 
               {/* Tabella Orari */}

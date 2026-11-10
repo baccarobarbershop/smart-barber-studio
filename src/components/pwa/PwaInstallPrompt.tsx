@@ -83,7 +83,7 @@ export function PwaInstallPrompt() {
 
           <div className="flex-1 min-w-0 pr-6">
             <h4 className="text-sm font-semibold text-zinc-100 flex items-center gap-1.5">
-              Installa Smart Barber App
+              Installa Barbershop Baccaro App
             </h4>
             <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
               {isIOS ? (

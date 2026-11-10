@@ -1295,7 +1295,7 @@ export function AdminSettingsView({ initialSettings }: AdminSettingsViewProps) {
               onChange={(e) =>
                 setSettings({ ...settings, salon_phone: e.target.value })
               }
-              placeholder="Es. 02 1234567 oppure 340 1234567"
+              placeholder="Es. 331 81 76 178"
               className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-medium outline-none focus:border-amber-500"
             />
             <p className="text-[11px] text-zinc-500 mt-1">
@@ -1313,7 +1313,7 @@ export function AdminSettingsView({ initialSettings }: AdminSettingsViewProps) {
               onChange={(e) =>
                 setSettings({ ...settings, whatsapp_phone: e.target.value })
               }
-              placeholder="Es. 347 1234567"
+              placeholder="Es. 331 81 76 178"
               className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-medium outline-none focus:border-amber-500"
             />
             <p className="text-[11px] text-zinc-500 mt-1">

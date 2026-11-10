@@ -25,7 +25,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
                 Informativa sulla Privacy & GDPR
               </h3>
               <p className="text-xs text-zinc-400">
-                Trattamento dei dati personali — Smart Barber Studio
+                Trattamento dei dati personali — Barbershop Roberto Baccaro (Torino)
               </p>
             </div>
           </div>
@@ -57,7 +57,7 @@ export function PrivacyPolicyModal({ isOpen, onClose }: PrivacyPolicyModalProps)
               1. Titolare del Trattamento
             </h4>
             <p className="text-zinc-400 leading-relaxed">
-              Il Titolare del trattamento è <strong>Smart Barber Studio</strong>, contattabile per qualsiasi chiarimento o richiesta relativa alla privacy tramite i recapiti telefonici e WhatsApp del salone indicati nell&apos;applicazione.
+              Il Titolare del trattamento è <strong>Barbershop Roberto Baccaro</strong> (Barberia &quot;Dal 1958&quot; - C.so Orbassano 230/a, Torino presso &quot;Wild Effect&quot;), contattabile per qualsiasi chiarimento o richiesta relativa alla privacy tramite i recapiti telefonici e WhatsApp del salone (Tel. 331 81 76 178) indicati nell&apos;applicazione.
             </p>
           </section>
 

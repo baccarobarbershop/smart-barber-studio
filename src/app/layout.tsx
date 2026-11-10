@@ -4,8 +4,8 @@ import { ClientRecognitionHeader } from "@/components/navigation/ClientRecogniti
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 
 export const metadata: Metadata = {
-  title: "Smart Barber Studio | Premium Grooming Experience",
-  description: "Assistente virtuale intelligente e gestione prenotazioni premium per il tuo salone.",
+  title: "Barbershop Roberto Baccaro | Barberia dal 1958 - Torino",
+  description: "Barbershop Roberto Baccaro - Barberia \"Dal 1958\" a Torino in C.so Orbassano 230/a (presso \"Wild Effect\"). Tel. 331 81 76 178.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icons/icon-192x192.png",
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Smart Barber",
+    title: "Barbershop Baccaro",
   },
 };
 

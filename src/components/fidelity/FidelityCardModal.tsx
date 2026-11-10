@@ -114,7 +114,7 @@ export function FidelityCardModal({
                   <span className="text-[10px] uppercase tracking-widest text-amber-400 font-extrabold block">
                     Exclusive VIP Member
                   </span>
-                  <h3 className="text-lg font-black text-white">Smart Barber Club</h3>
+                  <h3 className="text-lg font-black text-white">Barbershop Roberto Baccaro Club</h3>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-inner">
                   <Scissors className="w-5 h-5" />

@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { format } from "date-fns";
 
 export const metadata = {
-  title: "Prenota Appuntamento | Smart Barber Studio",
+  title: "Prenota Appuntamento | Barbershop Roberto Baccaro",
   description: "Seleziona data e orario per il tuo taglio esclusivo.",
 };
 

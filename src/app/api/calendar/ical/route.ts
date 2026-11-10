@@ -68,10 +68,10 @@ export async function GET(req: NextRequest) {
     const icsContent = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Smart Barber Studio//Agenda Salone//IT",
+      "PRODID:-//Barbershop Roberto Baccaro//Agenda Salone//IT",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      "X-WR-CALNAME:Smart Barber Studio",
+      "X-WR-CALNAME:Barbershop Roberto Baccaro",
       "X-WR-CALDESC:Calendario Appuntamenti in Salone",
       "X-WR-TIMEZONE:Europe/Rome",
       ...events,
