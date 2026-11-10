@@ -226,18 +226,19 @@ export function ChatView({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToBottom = useCallback((smooth = true) => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
+    const el = scrollContainerRef.current;
+    if (el) {
+      el.scrollTo({
+        top: el.scrollHeight,
         behavior: smooth ? "smooth" : "auto",
-        block: "end",
       });
     }
   }, []);
 
-  // Auto-scroll automatico e fluido verso il basso ogni volta che cambia il testo o arriva risposta
+  // Auto-scroll solo quando arrivano o si inviano nuovi messaggi (non durante la digitazione nel form)
   useEffect(() => {
     scrollToBottom(true);
-  }, [messages, liveSession?.messages, isLoading, scrollToBottom]);
+  }, [messages.length, liveSession?.messages?.length, isLoading, scrollToBottom]);
 
   // Sincronizzazione in tempo reale con polling della chat condivisa
   useEffect(() => {
@@ -459,6 +460,7 @@ export function ChatView({
                 m.id === assistantId ? { ...m, content: assistantText } : m
               )
             );
+            scrollToBottom(false);
           }
         }
       }
@@ -479,7 +481,7 @@ export function ChatView({
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto flex flex-col h-[calc(100dvh-1rem)] sm:h-[90vh] glass-panel-gold rounded-2xl sm:rounded-3xl overflow-hidden border border-amber-500/30 shadow-2xl">
+    <div className="w-full max-w-lg mx-auto flex flex-col h-full sm:h-[90vh] glass-panel-gold rounded-none sm:rounded-3xl overflow-hidden border-0 sm:border border-amber-500/30 shadow-2xl">
       {/* Top Header Pulito e Spazioso */}
       <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-950/90 border-b border-zinc-800/80 flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Freccia Indietro + Avatar + Nome Salone */}
@@ -952,7 +954,7 @@ export function ChatView({
               ? "Scrivi direttamente al barbiere..."
               : "Chiedi un appuntamento o orari liberi..."
           }
-          className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-500 outline-none transition"
+          className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-amber-500 rounded-xl px-3.5 py-2.5 text-[16px] sm:text-xs text-zinc-100 placeholder:text-zinc-500 outline-none transition"
         />
         <button
           type="submit"

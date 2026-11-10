@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function ChatPage() {
   return (
-    <main className="min-h-screen py-4 px-2 sm:px-4 flex flex-col justify-center items-center">
+    <main className="h-dvh max-h-dvh overflow-hidden p-0 sm:py-4 sm:px-4 flex flex-col justify-start sm:justify-center items-center">
       <Suspense fallback={<div className="text-zinc-400 text-xs">Caricamento chat...</div>}>
         <ChatView />
       </Suspense>
