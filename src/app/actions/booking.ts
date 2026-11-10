@@ -202,6 +202,14 @@ export async function bookAppointment(
   }
 
   // 4. Inserimento deterministico dell'appuntamento con protezione concorrenza
+  const selectedService = input.serviceName || "Taglio Capelli";
+  const finalPriceCents = input.priceCents ?? priceCents;
+  const finalNotes = input.serviceName
+    ? (notes && notes.trim()
+        ? `[Trattamento: ${selectedService}] ${notes.trim()}`
+        : `[Trattamento: ${selectedService}]`)
+    : (notes && notes.trim() ? notes.trim() : null);
+
   const { data: appointment, error: insertError } = await adminClient
     .from("appointments")
     .insert({
@@ -213,11 +221,11 @@ export async function bookAppointment(
       end_time: endTime,
       duration_minutes: durationMinutes,
       status: "confirmed",
-      notes: notes || null,
+      notes: finalNotes,
       lookbook_image_url: lookbookImageUrl || null,
       payment_method: paymentMethod,
       payment_status: paymentMethod === "in_app" ? "paid" : "unpaid",
-      price_cents: priceCents,
+      price_cents: finalPriceCents,
     })
     .select("id")
     .single();
@@ -241,8 +249,8 @@ export async function bookAppointment(
     appointment_id: appointment.id,
     user_id: targetUserId,
     type: "new_booking",
-    title: "Nuova Prenotazione!",
-    message: `${customerName.trim()} (${customerPhone.trim()}) ha prenotato per il ${format(
+    title: `Nuova Prenotazione: ${selectedService}`,
+    message: `${customerName.trim()} (${customerPhone.trim()}) ha prenotato ${selectedService} (€${(finalPriceCents / 100).toFixed(2)}) per il ${format(
       appointmentDateTime,
       "dd/MM/yyyy"
     )} alle ore ${time}. [${paymentMethod === "in_app" ? "Pagato in App" : "Paga in Salone"}]`,

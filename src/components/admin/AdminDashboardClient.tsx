@@ -134,8 +134,8 @@ export function AdminDashboardClient({
                 Pannello Barbiere (Admin)
               </span>
             </div>
-            <h1 className="text-2xl font-black text-zinc-100">
-              Smart <span className="gold-gradient-text">Barber Studio</span>
+            <h1 className="text-xl sm:text-2xl font-black text-zinc-100">
+              Barbershop <span className="gold-gradient-text">Roberto Baccaro</span>
             </h1>
           </div>
         </div>

@@ -13,7 +13,7 @@ export async function fetchPendingAlerts(): Promise<UrgentAlert[]> {
     .select(`
       *,
       profile:profiles!urgent_alerts_user_id_fkey(id, full_name, phone),
-      appointment:appointments(id, appointment_date, start_time, end_time, status)
+      appointment:appointments(id, appointment_date, start_time, end_time, status, notes, price_cents)
     `)
     .eq("status", "pending")
     .order("created_at", { ascending: false });

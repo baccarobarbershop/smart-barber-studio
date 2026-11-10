@@ -210,7 +210,7 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
     activeAlert.type === "urgent_cancellation" || activeAlert.type === "urgent_reschedule";
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-xl animate-pulse ${
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-xl animate-pulse ${
       isHumanSupport ? "bg-emerald-950/90" : "bg-red-950/95"
     }`}>
       {/* Glow e sirene visive */}
@@ -218,7 +218,7 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
         isHumanSupport ? "from-emerald-600/30" : "from-red-600/30"
       }`} />
 
-      <div className={`relative w-full max-w-lg max-h-[92dvh] overflow-y-auto rounded-3xl bg-zinc-950/95 border-2 p-5 sm:p-8 space-y-4 sm:space-y-6 shadow-2xl text-center animate-in zoom-in duration-200 ${
+      <div className={`relative w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl sm:rounded-3xl bg-zinc-950/95 border-2 p-4 sm:p-6 space-y-3.5 sm:space-y-5 shadow-2xl text-center animate-in zoom-in duration-200 break-words ${
         isHumanSupport
           ? "border-emerald-500 shadow-emerald-600/50"
           : "border-red-500 shadow-red-600/50"
@@ -227,14 +227,14 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
         <button
           type="button"
           onClick={() => setAudioMuted(!audioMuted)}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-zinc-100 rounded-full bg-zinc-900 border border-zinc-800"
+          className="absolute top-3 right-3 p-2 text-zinc-400 hover:text-zinc-100 rounded-full bg-zinc-900 border border-zinc-800"
           title={audioMuted ? "Attiva suono" : "Disattiva suono"}
         >
           {audioMuted ? <VolumeX className="w-4 h-4 text-zinc-500" /> : <Volume2 className={`w-4 h-4 animate-bounce ${isHumanSupport ? "text-emerald-400" : "text-red-400"}`} />}
         </button>
 
         {/* Icona Allarme a Battito */}
-        <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center mx-auto shadow-lg animate-bounce ${
+        <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center mx-auto shadow-lg animate-bounce ${
           isHumanSupport
             ? "bg-emerald-600/20 border-emerald-500 text-emerald-400 shadow-emerald-500/40"
             : isUrgentCancellation
@@ -242,17 +242,17 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
             : "bg-red-600/20 border-red-500 text-red-400 shadow-red-500/40"
         }`}>
           {isHumanSupport ? (
-            <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10" />
+            <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8" />
           ) : isUrgentCancellation ? (
-            <ShieldAlert className="w-8 h-8 sm:w-10 sm:h-10" />
+            <ShieldAlert className="w-7 h-7 sm:w-8 sm:h-8" />
           ) : (
-            <BellRing className="w-8 h-8 sm:w-10 sm:h-10" />
+            <BellRing className="w-7 h-7 sm:w-8 sm:h-8" />
           )}
         </div>
 
         {/* Titolo e Dettagli */}
-        <div className="space-y-2">
-          <span className={`text-[11px] sm:text-xs uppercase font-extrabold tracking-widest px-3 py-1 rounded-full border inline-block ${
+        <div className="space-y-1.5 sm:space-y-2">
+          <span className={`text-[10px] sm:text-xs uppercase font-extrabold tracking-widest px-2.5 py-0.5 rounded-full border inline-block ${
             isHumanSupport
               ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
               : isUrgentCancellation
@@ -265,28 +265,28 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
               ? "ALLERTA CRITICA < 24H"
               : "NOTIFICA IN TEMPO REALE"}
           </span>
-          <h2 className="text-xl sm:text-3xl font-black text-zinc-100 tracking-tight">
+          <h2 className="text-lg sm:text-2xl font-black text-zinc-100 tracking-tight break-words">
             {formatItalianAlertDates(activeAlert.title)}
           </h2>
-          <p className="text-sm sm:text-lg text-zinc-200 font-medium leading-snug">
+          <p className="text-xs sm:text-base text-zinc-200 font-medium leading-relaxed break-words px-1">
             {formatItalianAlertDates(activeAlert.message)}
           </p>
         </div>
 
         {/* Numero allarmi in coda se più di uno */}
         {alerts.length > 1 && (
-          <div className="text-xs text-amber-400 font-semibold bg-amber-500/10 py-1.5 px-3 rounded-lg border border-amber-500/20">
+          <div className="text-[11px] sm:text-xs text-amber-400 font-semibold bg-amber-500/10 py-1.5 px-2.5 rounded-lg border border-amber-500/20">
             Ci sono altri {alerts.length - 1} allarmi in attesa di presa in carico.
           </div>
         )}
 
         {/* Pulsante Critico Risolutivo: PRESO IN CARICO */}
-        <div className="pt-2">
+        <div className="pt-1 sm:pt-2">
           <button
             type="button"
             disabled={isProcessing}
             onClick={handleAcknowledge}
-            className={`w-full py-4 sm:py-5 px-4 sm:px-6 rounded-2xl text-base sm:text-xl font-extrabold uppercase tracking-wide text-white shadow-2xl active:scale-95 transition-all duration-150 flex items-center justify-center gap-2.5 sm:gap-3 border-2 ${
+            className={`w-full py-3.5 sm:py-4 px-3 sm:px-5 rounded-xl sm:rounded-2xl text-sm sm:text-base font-extrabold uppercase tracking-wide text-white shadow-2xl active:scale-95 transition-all duration-150 flex flex-wrap items-center justify-center gap-2 border-2 ${
               isHumanSupport
                 ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/60 border-emerald-300"
                 : "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-600/60 border-red-300"
@@ -294,17 +294,17 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
           >
             {isHumanSupport ? (
               <>
-                <MessageSquare className="w-6 h-6" />
+                <MessageSquare className="w-5 h-5 shrink-0" />
                 <span>{isProcessing ? "Apertura Chat..." : "PRENDI IN CARICO & VAI IN CHAT"}</span>
               </>
             ) : (
               <>
-                <CheckCircle className="w-6 h-6" />
+                <CheckCircle className="w-5 h-5 shrink-0" />
                 <span>{isProcessing ? "Aggiornamento in corso..." : "PRESO IN CARICO"}</span>
               </>
             )}
           </button>
-          <p className="text-[11px] text-zinc-400 mt-2">
+          <p className="text-[10px] sm:text-[11px] text-zinc-400 mt-2">
             {isHumanSupport
               ? "L'allarme cesserà e verrai portato direttamente nella chat con il cliente."
               : "L'allarme sonoro e visivo cesserà solo dopo aver cliccato questo tasto."}

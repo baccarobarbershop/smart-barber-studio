@@ -48,6 +48,32 @@ import {
 import { normalizePhoneDigits } from "@/lib/phone";
 import { buildReminderWhatsAppUrl, buildBarberDailyAgendaWhatsAppUrl, type DailyAgendaItem } from "@/lib/whatsapp";
 
+export function parseAppointmentServiceAndNotes(notes: string | null | undefined): {
+  serviceName: string | null;
+  cleanNotes: string | null;
+} {
+  if (!notes || !notes.trim()) return { serviceName: null, cleanNotes: null };
+  const str = notes.trim();
+
+  // Pattern 1: [Trattamento: Sopracciglia] o [Servizio: Sopracciglia]
+  const bracketMatch = str.match(/\[(?:Trattamento|Servizio):\s*([^\]]+)\]/i);
+  if (bracketMatch) {
+    const serviceName = bracketMatch[1].trim();
+    const remaining = str.replace(bracketMatch[0], "").replace(/^\s*Note:\s*/i, "").trim();
+    return { serviceName, cleanNotes: remaining || null };
+  }
+
+  // Pattern 2: [Prenotazione Telefonica / Banco] Trattamento: Sopracciglia
+  const manualMatch = str.match(/Trattamento:\s*([^,\n]+)/i);
+  if (manualMatch) {
+    const serviceName = manualMatch[1].trim();
+    const remaining = str.replace(/\[Prenotazione Telefonica \/ Banco\]/i, "").replace(manualMatch[0], "").trim();
+    return { serviceName, cleanNotes: remaining || null };
+  }
+
+  return { serviceName: null, cleanNotes: str };
+}
+
 interface AdminCalendarMultiViewProps {
   initialAppointments: Appointment[];
   settings: BusinessSettings;
@@ -473,21 +499,21 @@ export function AdminCalendarMultiView({
   };
 
   return (
-    <div className="glass-panel rounded-3xl p-5 sm:p-6 space-y-6 border border-amber-500/20 shadow-2xl">
+    <div className="glass-panel rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 space-y-4 sm:space-y-6 border border-amber-500/20 shadow-2xl w-full max-w-full overflow-hidden">
       {/* Header con Selettore Viste e Navigazione */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-zinc-800">
         <div>
           <span className="text-xs uppercase tracking-wider font-bold text-amber-400">
             Visione Globale Agenda
           </span>
-          <h2 className="text-xl sm:text-2xl font-black text-zinc-100 capitalize">
+          <h2 className="text-lg sm:text-2xl font-black text-zinc-100 capitalize">
             {viewMode === "day" && format(currentDate, "EEEE d MMMM yyyy", { locale: it })}
             {viewMode === "month" && format(currentDate, "MMMM yyyy", { locale: it })}
             {viewMode === "year" && format(currentDate, "yyyy", { locale: it })}
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Frecce Navigazione */}
           <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1">
             <button
@@ -521,7 +547,7 @@ export function AdminCalendarMultiView({
           <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1 text-xs font-semibold">
             <button
               onClick={() => setViewMode("day")}
-              className={`px-3 py-1.5 rounded-lg transition ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition ${
                 viewMode === "day"
                   ? "bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20"
                   : "text-zinc-400 hover:text-zinc-200"
@@ -531,7 +557,7 @@ export function AdminCalendarMultiView({
             </button>
             <button
               onClick={() => setViewMode("month")}
-              className={`px-3 py-1.5 rounded-lg transition ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition ${
                 viewMode === "month"
                   ? "bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20"
                   : "text-zinc-400 hover:text-zinc-200"
@@ -541,7 +567,7 @@ export function AdminCalendarMultiView({
             </button>
             <button
               onClick={() => setViewMode("year")}
-              className={`px-3 py-1.5 rounded-lg transition ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition ${
                 viewMode === "year"
                   ? "bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20"
                   : "text-zinc-400 hover:text-zinc-200"
@@ -555,7 +581,7 @@ export function AdminCalendarMultiView({
           <button
             type="button"
             onClick={() => setIsSyncModalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
             title="Sincronizza gli appuntamenti con Google Calendar e Apple Calendar sul tuo smartphone"
           >
             <Smartphone className="w-3.5 h-3.5 text-amber-400" />
@@ -628,9 +654,15 @@ export function AdminCalendarMultiView({
                           <span className="font-bold text-zinc-100 text-xs group-hover:text-amber-400 transition">
                             {apt.customer_name}
                           </span>
-                          <span className="text-[11px] text-zinc-400 font-medium">
+                          <span className="text-[11px] text-zinc-400 font-medium font-mono">
                             {apt.customer_phone}
                           </span>
+                          {parseAppointmentServiceAndNotes(apt.notes).serviceName && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1">
+                              <Scissors className="w-2.5 h-2.5 text-amber-400" />
+                              <span>{parseAppointmentServiceAndNotes(apt.notes).serviceName}</span>
+                            </span>
+                          )}
                           {renderClientBadge(apt.customer_phone)}
                           {isToday && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold uppercase tracking-wider">
@@ -689,11 +721,13 @@ export function AdminCalendarMultiView({
               apt.customer_name?.startsWith("⛔");
             const clean = normalizePhoneDigits(apt.customer_phone);
             const badge = clientBadges[clean];
+            const { serviceName } = parseAppointmentServiceAndNotes(apt.notes);
             return {
               timeStr: apt.start_time.substring(0, 5),
               customerName: apt.customer_name,
               customerPhone: apt.customer_phone,
               durationMinutes: apt.duration_minutes,
+              serviceName: serviceName || "Taglio Capelli",
               isBlocked,
               notes: apt.notes,
               internalNote: clean ? clientNotes[clean] : undefined,
@@ -711,14 +745,14 @@ export function AdminCalendarMultiView({
 
         return (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-400 bg-zinc-900/60 p-3 rounded-xl border border-zinc-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-xs text-zinc-400 bg-zinc-900/60 p-2.5 sm:p-3 rounded-xl border border-zinc-800 w-full overflow-hidden">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
                 Timeline oraria (Slot da {settings.slot_duration_minutes} min)
               </span>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-zinc-400">
-                  Totale appuntamenti:{" "}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-zinc-400 mr-1">
+                  Totale:{" "}
                   <strong className="text-amber-400 font-bold">
                     {dayAppointments.length}
                   </strong>
@@ -832,6 +866,7 @@ export function AdminCalendarMultiView({
                   const isExpanded = expandedAptId === apt.id;
                   const cleanPhone = (apt.customer_phone || "").replace(/\D/g, "");
                   const customerInternalNote = cleanPhone ? clientNotes[cleanPhone] : null;
+                  const { serviceName, cleanNotes } = parseAppointmentServiceAndNotes(apt.notes);
 
                   return (
                     <div
@@ -849,20 +884,30 @@ export function AdminCalendarMultiView({
                       {/* Riga principale cliccabile */}
                       <div
                         onClick={() => setExpandedAptId(isExpanded ? null : apt.id)}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-3 cursor-pointer select-none"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-3.5 gap-2.5 sm:gap-3 cursor-pointer select-none"
                       >
-                        <div className="flex items-start sm:items-center gap-3">
-                          <span className="font-bold text-amber-400 text-sm w-12 text-center pt-0.5 sm:pt-0">
+                        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
+                          <span className="font-bold text-amber-400 text-sm w-12 text-center pt-0.5 sm:pt-0 shrink-0">
                             {timeString}
                           </span>
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                               <span className="font-bold text-zinc-100 text-sm">
                                 {apt.customer_name}
                               </span>
-                              <span className="text-xs text-amber-400 font-semibold">
+                              <span className="text-xs text-amber-400 font-semibold font-mono">
                                 {apt.customer_phone}
                               </span>
+                              {/* BADGE SERVIZIO / TRATTAMENTO PRENOTATO */}
+                              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold shrink-0">
+                                <Scissors className="w-3 h-3 text-amber-400 shrink-0" />
+                                <span>{serviceName || "Taglio Capelli"}</span>
+                              </span>
+                              {apt.price_cents > 0 && (
+                                <span className="text-[11px] font-mono font-bold text-amber-400/90 shrink-0">
+                                  {(apt.price_cents / 100).toFixed(2).replace(".00", "")} €
+                                </span>
+                              )}
                               {renderClientBadge(apt.customer_phone)}
                               {customerInternalNote && (
                                 <span
@@ -880,15 +925,15 @@ export function AdminCalendarMultiView({
                                 </span>
                               )}
                             </div>
-                            {apt.notes && !isExpanded && (
-                              <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                                Note: {apt.notes}
+                            {cleanNotes && !isExpanded && (
+                              <p className="text-xs text-zinc-400 mt-1 line-clamp-1">
+                                <span className="text-zinc-500">Note:</span> {cleanNotes}
                               </p>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start sm:self-auto pt-1 sm:pt-0">
                           {cleanPhone && !isBlocked && !isCancelled && !isCompleted && (
                             <a
                               href={buildReminderWhatsAppUrl({
@@ -896,6 +941,7 @@ export function AdminCalendarMultiView({
                                 customerPhone: apt.customer_phone,
                                 dateStr: format(new Date(`${apt.appointment_date}T00:00:00`), "EEEE d MMMM", { locale: it }),
                                 timeStr: apt.start_time.substring(0, 5),
+                                serviceName: serviceName || "Taglio Capelli",
                               })}
                               target="_blank"
                               rel="noreferrer"
@@ -1043,10 +1089,20 @@ export function AdminCalendarMultiView({
                                   </a>
                                 )}
                               </div>
-                              {apt.notes && (
+                              {/* Dettaglio Trattamento Prenotato */}
+                              <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-wrap items-center justify-between gap-2">
+                                <span className="flex items-center gap-1.5 font-bold">
+                                  <Scissors className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>Trattamento Selezionato: <strong className="text-white">{serviceName || "Taglio Capelli"}</strong></span>
+                                </span>
+                                <span className="font-mono font-black text-amber-400 text-sm">
+                                  {(apt.price_cents / 100).toFixed(2).replace(".00", "")} €
+                                </span>
+                              </div>
+                              {cleanNotes && (
                                 <div className="mt-2 p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs">
                                   <span className="font-bold text-zinc-400 block mb-0.5">Note Cliente:</span>
-                                  {apt.notes}
+                                  {cleanNotes}
                                 </div>
                               )}
 
@@ -1263,8 +1319,8 @@ export function AdminCalendarMultiView({
       {/* 2. VISTA MESE (Griglia mensile con carico appuntamenti)     */}
       {/* ========================================================= */}
       {viewMode === "month" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-zinc-400 pb-2 border-b border-zinc-800">
+        <div className="space-y-3 sm:space-y-4 w-full overflow-hidden">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[11px] sm:text-xs font-semibold text-zinc-400 pb-2 border-b border-zinc-800">
             <span>Lun</span>
             <span>Mar</span>
             <span>Mer</span>
@@ -1274,7 +1330,7 @@ export function AdminCalendarMultiView({
             <span>Dom</span>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {(() => {
               const daysInMonth = getDaysInMonth(currentDate);
               const firstDayOfMonth = startOfMonth(currentDate);
@@ -1285,7 +1341,7 @@ export function AdminCalendarMultiView({
 
               // Spazi vuoti prima del primo giorno
               for (let i = 0; i < startingDayIndex; i++) {
-                cells.push(<div key={`empty-${i}`} className="p-3 opacity-0" />);
+                cells.push(<div key={`empty-${i}`} className="p-1 sm:p-3 opacity-0" />);
               }
 
               const year = currentDate.getFullYear();
@@ -1307,7 +1363,7 @@ export function AdminCalendarMultiView({
                       setCurrentDate(new Date(`${dateKey}T00:00:00`));
                       setViewMode("day"); // Cliccando sul giorno passa alla timeline oraria
                     }}
-                    className={`min-h-[4.5rem] p-2 rounded-2xl border text-left flex flex-col justify-between transition ${
+                    className={`min-h-[3.5rem] sm:min-h-[4.5rem] p-1 sm:p-2 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between transition min-w-0 overflow-hidden ${
                       isSelected
                         ? "bg-amber-500/20 border-amber-500"
                         : count > 0
@@ -1316,19 +1372,19 @@ export function AdminCalendarMultiView({
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold ${count > 0 ? "text-zinc-100" : "text-zinc-500"}`}>
+                      <span className={`text-[11px] sm:text-xs font-bold ${count > 0 ? "text-zinc-100" : "text-zinc-500"}`}>
                         {day}
                       </span>
                       {count > 0 && (
-                        <span className="w-2 h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400" />
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400" />
                       )}
                     </div>
                     {count > 0 ? (
-                      <span className="text-[11px] font-semibold text-amber-400">
-                        {count} {count === 1 ? "appunt." : "appuntamenti"}
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-amber-400 truncate">
+                        {count} <span className="hidden sm:inline">{count === 1 ? "appunt." : "appuntamenti"}</span>
                       </span>
                     ) : (
-                      <span className="text-[10px] text-zinc-600">Libero</span>
+                      <span className="text-[9px] sm:text-[10px] text-zinc-600 hidden sm:inline">Libero</span>
                     )}
                   </button>
                 );

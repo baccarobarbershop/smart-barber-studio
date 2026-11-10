@@ -92,7 +92,7 @@ export function NewBookingNotificationListener({
   if (!toast) return null;
 
   return (
-    <div className="fixed top-5 right-5 z-50 max-w-sm w-full animate-in slide-in-from-top-4 duration-300 pointer-events-auto">
+    <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-5 sm:w-96 z-50 animate-in slide-in-from-top-4 duration-300 pointer-events-auto">
       <div className="p-4 rounded-2xl bg-zinc-950/95 border-2 border-amber-500/60 shadow-2xl shadow-amber-500/20 backdrop-blur-md flex items-start gap-3">
         <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 shrink-0">
           <Sparkles className="w-5 h-5 animate-pulse" />

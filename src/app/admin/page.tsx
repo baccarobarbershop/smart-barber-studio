@@ -51,7 +51,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 sm:p-8 max-w-6xl mx-auto space-y-6">
+    <main className="min-h-screen p-2.5 sm:p-6 md:p-8 w-full max-w-6xl mx-auto space-y-4 sm:space-y-6 overflow-x-hidden">
       <AdminDashboardClient
         initialSettings={settings}
         initialAppointments={appointments}
