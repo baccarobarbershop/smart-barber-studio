@@ -3,12 +3,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addMinutes, format, parse, isBefore, addDays, isAfter } from "date-fns";
+import { it } from "date-fns/locale";
 import {
   sendWhatsAppAdminAlert,
   sendWhatsAppCancellationIntentAlert,
 } from "@/app/actions/whatsapp";
 import { checkCustomerNoShowStatus } from "@/app/actions/admin";
 import type { PaymentMethod } from "@/types/database";
+
+function formatDateItalianStr(dateStr: string): string {
+  try {
+    return format(new Date(`${dateStr}T00:00:00`), "d MMMM yyyy", { locale: it });
+  } catch {
+    return dateStr;
+  }
+}
 
 export interface BookAppointmentInput {
   date: string; // "YYYY-MM-DD"
@@ -362,13 +371,15 @@ export async function cancelAppointmentByClient(input: {
   if (minCancellationHours > 0 && hoursRemaining < minCancellationHours) {
     const aptTime = apt.start_time.substring(0, 5);
 
+    const aptDateFormatted = format(aptDateTime, "EEEE d MMMM yyyy", { locale: it });
+
     // NOTIFICA IMMEDIATA URGENTE AL BARBIERE (Sirena sonora in dashboard + Allarme rosso)
     await adminClient.from("urgent_alerts").insert({
       appointment_id: apt.id,
       user_id: apt.user_id,
       type: "urgent_cancellation",
       title: "🚨 RICHIESTA DISDETTA CON POCO PREAVVISO!",
-      message: `⚠️ ATTENZIONE: ${apt.customer_name} (${apt.customer_phone}) ha richiesto di DISDIRE l'appuntamento del ${apt.appointment_date} ore ${aptTime} con meno di ${minCancellationHours}h di preavviso! L'appuntamento NON è stato liberato automaticamente per permetterti di gestire la poltrona. ${reason ? `(Motivo indicato: "${reason}")` : ""
+      message: `⚠️ ATTENZIONE: ${apt.customer_name} (${apt.customer_phone}) ha richiesto di DISDIRE l'appuntamento del ${aptDateFormatted} ore ${aptTime} con meno di ${minCancellationHours}h di preavviso! L'appuntamento NON è stato liberato automaticamente per permetterti di gestire la poltrona. ${reason ? `(Motivo indicato: "${reason}")` : ""
         }`,
       status: "pending",
     });
@@ -412,12 +423,13 @@ export async function cancelAppointmentByClient(input: {
 
   // 3. Spedizione immediata ALLERTA URGENTE ordinaria per la dashboard del barbiere
   const aptTime = apt.start_time.substring(0, 5);
+  const aptDateFormatted = format(aptDateTime, "EEEE d MMMM yyyy", { locale: it });
   await adminClient.from("urgent_alerts").insert({
     appointment_id: apt.id,
     user_id: apt.user_id,
     type: "urgent_cancellation",
     title: "🚨 DISDETTA URGENTE CLIENTE!",
-    message: `${apt.customer_name} (${apt.customer_phone}) ha DISDETTO l'appuntamento del ${apt.appointment_date} ore ${aptTime}. Lo slot è tornato libero! ${reason ? `(Motivo: "${reason}")` : ""
+    message: `${apt.customer_name} (${apt.customer_phone}) ha DISDETTO l'appuntamento del ${aptDateFormatted} ore ${aptTime}. Lo slot è tornato libero! ${reason ? `(Motivo: "${reason}")` : ""
       }`,
     status: "pending",
   });
@@ -494,7 +506,7 @@ export async function rescheduleAppointmentByClient(input: {
       user_id: apt.user_id,
       type: "urgent_reschedule",
       title: "🚨 RICHIESTA SPOSTAMENTO CON POCO PREAVVISO!",
-      message: `⚠️ ATTENZIONE: ${apt.customer_name} (${apt.customer_phone}) ha richiesto di SPOSTARE l'appuntamento del ${apt.appointment_date} ore ${aptTime} al ${newDate} ore ${newTime} con meno di ${minCancellationHours}h di preavviso! Lo spostamento non è avvenuto in automatico per permetterti di concordarlo con il cliente.`,
+      message: `⚠️ ATTENZIONE: ${apt.customer_name} (${apt.customer_phone}) ha richiesto di SPOSTARE l'appuntamento del ${formatDateItalianStr(apt.appointment_date)} ore ${aptTime} al ${formatDateItalianStr(newDate)} ore ${newTime} con meno di ${minCancellationHours}h di preavviso! Lo spostamento non è avvenuto in automatico per permetterti di concordarlo con il cliente.`,
       status: "pending",
     });
 
@@ -567,7 +579,7 @@ export async function rescheduleAppointmentByClient(input: {
     user_id: apt.user_id,
     type: "urgent_reschedule",
     title: "⚠️ SPOSTAMENTO ORARIO CLIENTE!",
-    message: `${apt.customer_name} (${apt.customer_phone}) ha SPOSTATO l'appuntamento dal ${oldDate} ore ${oldTime} al NUOVO ORARIO: ${newDate} ore ${newTime}!`,
+    message: `${apt.customer_name} (${apt.customer_phone}) ha SPOSTATO l'appuntamento dal ${formatDateItalianStr(oldDate)} ore ${oldTime} al NUOVO ORARIO: ${formatDateItalianStr(newDate)} ore ${newTime}!`,
     status: "pending",
   });
 

@@ -59,31 +59,31 @@ export function BookingView({
   return (
     <div className="w-full max-w-lg mx-auto p-4 sm:p-6 space-y-6">
       {/* Header con navigazione e switch verso la Chat AI */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-amber-400 transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-400 hover:text-amber-400 transition"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Home</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => setIsManageModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-semibold transition"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[11px] sm:text-xs font-semibold transition whitespace-nowrap"
           >
-            <CalendarCheck className="w-3.5 h-3.5 text-amber-400" />
-            <span>I Miei Appuntamenti</span>
+            <CalendarCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="hidden xs:inline">I Miei </span><span>Appuntamenti</span>
           </button>
 
           <Link
             href="/chat"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold transition"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[11px] sm:text-xs font-semibold transition whitespace-nowrap"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Assistente Virtuale</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="hidden xs:inline">Assistente </span><span>AI</span>
           </Link>
         </div>
       </div>

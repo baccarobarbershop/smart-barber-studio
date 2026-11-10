@@ -141,43 +141,43 @@ export function AdminDashboardClient({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-zinc-900 border border-zinc-800 p-1 rounded-2xl text-xs font-bold">
+        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 p-1 rounded-2xl text-[11px] sm:text-xs font-bold overflow-x-auto max-w-full no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("calendar")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition whitespace-nowrap ${
               activeTab === "calendar"
                 ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>Calendario</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("fidelity")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition whitespace-nowrap ${
               activeTab === "fidelity"
                 ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            <Award className="w-4 h-4" />
+            <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>Tessere & Clienti</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition whitespace-nowrap ${
               activeTab === "settings"
                 ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
                 : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>Orari & Regole</span>
           </button>
 
@@ -185,9 +185,9 @@ export function AdminDashboardClient({
             type="button"
             onClick={handleAdminLogout}
             title="Esci dall'area riservata barbiere"
-            className="p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-zinc-800/80 transition"
+            className="p-1.5 sm:p-2 rounded-xl text-zinc-400 hover:text-red-400 hover:bg-zinc-800/80 transition shrink-0"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>

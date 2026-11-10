@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { format, addDays, isToday, isTomorrow, isValid } from "date-fns";
 import { it } from "date-fns/locale";
 import { BookingModal } from "@/components/booking/BookingModal";
@@ -221,6 +221,23 @@ export function ChatView({
     "live_client";
 
   const [liveSession, setLiveSession] = useState<LiveChatSession | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        block: "end",
+      });
+    }
+  }, []);
+
+  // Auto-scroll automatico e fluido verso il basso ogni volta che cambia il testo o arriva risposta
+  useEffect(() => {
+    scrollToBottom(true);
+  }, [messages, liveSession?.messages, isLoading, scrollToBottom]);
 
   // Sincronizzazione in tempo reale con polling della chat condivisa
   useEffect(() => {
@@ -462,11 +479,11 @@ export function ChatView({
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto flex flex-col h-[90vh] glass-panel-gold rounded-3xl overflow-hidden border border-amber-500/30 shadow-2xl">
+    <div className="w-full max-w-lg mx-auto flex flex-col h-[calc(100dvh-1rem)] sm:h-[90vh] glass-panel-gold rounded-2xl sm:rounded-3xl overflow-hidden border border-amber-500/30 shadow-2xl">
       {/* Top Header Pulito e Spazioso */}
-      <div className="px-4 py-3 bg-zinc-950/90 border-b border-zinc-800/80 flex items-center justify-between gap-3">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-zinc-950/90 border-b border-zinc-800/80 flex items-center justify-between gap-2 sm:gap-3">
         {/* Left: Freccia Indietro + Avatar + Nome Salone */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           <Link
             href={isBarber ? "/admin" : "/"}
             className="p-1.5 -ml-1 rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition shrink-0"
@@ -475,7 +492,7 @@ export function ChatView({
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="relative shrink-0">
-            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shadow-sm ${
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center shadow-sm ${
               isBarber
                 ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-sm font-bold"
                 : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
@@ -485,14 +502,14 @@ export function ChatView({
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-zinc-950 ring-1 ring-emerald-500/50" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-zinc-100 truncate tracking-tight whitespace-nowrap">
+            <h2 className="text-xs sm:text-sm font-bold text-zinc-100 truncate tracking-tight">
               {isBarber
                 ? `Chat con ${clientNameParam || liveSession?.clientName || "Cliente"}`
                 : "Smart Barber Studio"}
             </h2>
-            <p className="text-[11px] text-zinc-400 truncate flex items-center gap-1.5 whitespace-nowrap">
+            <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span>
+              <span className="truncate">
                 {isBarber
                   ? "Connesso con il Cliente"
                   : liveSession?.isBarberActive
@@ -504,21 +521,21 @@ export function ChatView({
         </div>
 
         {/* Right: Pulsante Diretto per il Barbiere */}
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-1.5 sm:gap-2">
           {isBarber ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={handleReleaseToAi}
                 title="Riconsegna la chat all'Assistente AI"
-                className="px-2.5 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+                className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-300 text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 transition shadow-sm whitespace-nowrap"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-red-400" />
+                <RotateCcw className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 <span>Rilascia all&apos;AI</span>
               </button>
               <Link
                 href="/admin"
-                className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-bold transition"
+                className="px-2 sm:px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[11px] sm:text-xs font-bold transition whitespace-nowrap"
               >
                 Admin
               </Link>
@@ -531,9 +548,9 @@ export function ChatView({
                 setLiveSession((prev) => (prev ? { ...prev, isBarberActive: false } : null));
               }}
               title="Torna a parlare con l'Assistente Virtuale AI"
-              className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-amber-500/20 border border-emerald-500/40 hover:border-amber-500/50 text-emerald-300 hover:text-amber-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-amber-500/20 border border-emerald-500/40 hover:border-amber-500/50 text-emerald-300 hover:text-amber-300 font-bold text-xs flex items-center gap-1.5 shadow-sm transition whitespace-nowrap"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5 shrink-0" />
               <span>Torna all&apos;AI</span>
             </button>
           ) : handoffSent ? (
@@ -542,10 +559,10 @@ export function ChatView({
               disabled={handoffLoading}
               onClick={handleCancelHumanRequest}
               title="Annulla la richiesta e torna a chattare con l'Assistente Virtuale"
-              className="px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 shadow-sm whitespace-nowrap"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-300 shadow-sm whitespace-nowrap"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Torna all&apos;Assistente</span>
+              <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xs:inline">Torna all&apos;</span><span>Assistente</span>
             </button>
           ) : (
             <button
@@ -553,14 +570,14 @@ export function ChatView({
               disabled={handoffLoading}
               onClick={handleRequestHuman}
               title="Richiedi l'assistenza diretta del barbiere in salone"
-              className="px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition bg-zinc-900 hover:bg-amber-500 hover:text-black text-amber-300 border-amber-500/30 shadow-sm whitespace-nowrap"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1 sm:gap-1.5 transition bg-zinc-900 hover:bg-amber-500 hover:text-black text-amber-300 border-amber-500/30 shadow-sm whitespace-nowrap"
             >
               {handoffLoading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
               ) : (
                 <>
-                  <UserCheck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Parla col Barbiere</span>
+                  <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span><span className="hidden xs:inline">Parla col </span>Barbiere</span>
                 </>
               )}
             </button>
@@ -627,29 +644,29 @@ export function ChatView({
       )}
 
       {/* Barra Scorciatoie Rapide Sottostante */}
-      <div className="px-3 py-2 bg-zinc-950/60 border-b border-zinc-800/60 flex items-center gap-2">
+      <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-zinc-950/60 border-b border-zinc-800/60 flex items-center gap-1.5 sm:gap-2">
         <button
           type="button"
           onClick={() => setIsManageModalOpen(true)}
           title="Gestisci o disdici un tuo appuntamento esistente"
-          className="flex-1 py-1.5 px-2.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-amber-300 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition shadow-sm whitespace-nowrap"
+          className="flex-1 min-w-0 py-1.5 px-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-amber-300 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition shadow-sm"
         >
           <CalendarCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span>I Miei Appuntamenti</span>
+          <span className="truncate">I Miei Appuntamenti</span>
         </button>
 
         <Link
           href="/book"
           title="Passa alla vista calendario a 14 giorni"
-          className="flex-1 py-1.5 px-2.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-amber-300 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition shadow-sm whitespace-nowrap"
+          className="flex-1 min-w-0 py-1.5 px-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-amber-300 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition shadow-sm"
         >
           <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span>Calendario 14 Giorni</span>
+          <span className="truncate">Calendario 14 Giorni</span>
         </Link>
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+      <div ref={scrollContainerRef} className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 sm:space-y-4 text-xs">
         {/* SE LA CHAT È PRESA IN CARICO DAL BARBIERE (MODALITÀ LIVE OPERATORE) */}
         {liveSession && (isBarber || liveSession.isBarberActive) ? (
           <div className="space-y-3">
@@ -695,11 +712,21 @@ export function ChatView({
                       )}
 
                       <div className="space-y-1">
-                        {!isSelf && (
-                          <span className="text-[10px] font-bold text-zinc-400 pl-1 block">
-                            {m.senderName}
-                          </span>
-                        )}
+                        <div className={`flex items-center gap-2 text-[10px] text-zinc-500 ${isSelf ? "justify-end" : "justify-start"} px-1`}>
+                          {!isSelf && (
+                            <span className="font-bold text-zinc-400">
+                              {m.senderName}
+                            </span>
+                          )}
+                          {m.timestamp && (
+                            <span>
+                              {new Date(m.timestamp).toLocaleTimeString("it-IT", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          )}
+                        </div>
                         <div
                           className={`rounded-2xl p-3.5 text-xs shadow-md ${
                             isSelf
@@ -906,6 +933,7 @@ export function ChatView({
             <span>L'assistente sta verificando...</span>
           </div>
         )}
+        <div ref={messagesEndRef} className="h-1" />
       </div>
 
       {/* Input Form */}

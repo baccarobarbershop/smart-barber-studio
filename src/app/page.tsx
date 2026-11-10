@@ -59,7 +59,7 @@ export default function Home() {
         />
       ) : (
         /* Schermata Principale del Salone per il cliente riconosciuto / ospite */
-        <div className="max-w-md w-full glass-panel-gold rounded-3xl p-6 sm:p-8 text-center space-y-6 relative z-10 shadow-2xl border border-amber-500/30 animate-in fade-in duration-300">
+        <div className="max-w-md w-full glass-panel-gold rounded-3xl p-5 sm:p-8 text-center space-y-5 sm:space-y-6 relative z-10 shadow-2xl border border-amber-500/30 animate-in fade-in duration-300">
           
           {/* Luxury Badge & Logo */}
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-3xl mx-auto shadow-inner">

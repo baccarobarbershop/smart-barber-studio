@@ -18,6 +18,8 @@ import {
   markAppointmentNoShow,
 } from "@/app/actions/admin";
 import type { Appointment } from "@/types/database";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 interface UnconfirmedPastAlertBannerProps {
   onRefresh?: () => void;
@@ -169,6 +171,14 @@ export function UnconfirmedPastAlertBanner({ onRefresh }: UnconfirmedPastAlertBa
                   const isProcessing = processingId === apt.id;
                   const timeStr = apt.start_time.substring(0, 5);
 
+                  const formattedAptDate = (() => {
+                    try {
+                      return format(new Date(`${apt.appointment_date}T00:00:00`), "dd/MM/yyyy");
+                    } catch {
+                      return apt.appointment_date;
+                    }
+                  })();
+
                   return (
                     <div
                       key={apt.id}
@@ -177,7 +187,7 @@ export function UnconfirmedPastAlertBanner({ onRefresh }: UnconfirmedPastAlertBa
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-amber-400">
-                            {apt.appointment_date} ore {timeStr}
+                            {formattedAptDate} ore {timeStr}
                           </span>
                           <span className="text-zinc-500">•</span>
                           <span className="font-bold text-zinc-100">{apt.customer_name}</span>

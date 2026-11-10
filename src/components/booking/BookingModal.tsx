@@ -425,7 +425,7 @@ export function BookingModal({
                 <button
                   type="submit"
                   disabled={isSubmitting || uploadingImage}
-                  className="w-full py-3.5 px-4 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-black transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-wider"
+                  className="w-full py-3.5 px-4 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-black transition shadow-lg shadow-amber-500/25 flex flex-wrap items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-wider"
                 >
                   {isSubmitting || uploadingImage ? (
                     <>
@@ -433,9 +433,12 @@ export function BookingModal({
                       <span>Elaborazione...</span>
                     </>
                   ) : (
-                    <span>
-                      Conferma Prenotazione ({paymentMethod === "in_app" ? `Paga Online ${formattedServicePrice}` : `Paga in Salone (${formattedServicePrice})`})
-                    </span>
+                    <>
+                      <span>Conferma Prenotazione</span>
+                      <span className="text-[11px] opacity-90 normal-case font-semibold">
+                        • {paymentMethod === "in_app" ? "Online" : "In Salone"} ({formattedServicePrice})
+                      </span>
+                    </>
                   )}
                 </button>
               </div>

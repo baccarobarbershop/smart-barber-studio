@@ -17,6 +17,12 @@ interface UrgentAlarmModalProps {
   }) => void;
 }
 
+function formatItalianAlertDates(text: string): string {
+  if (!text) return "";
+  // Converte YYYY-MM-DD in DD/MM/YYYY per le date in formato inglese/ISO
+  return text.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (_, y, m, d) => `${d}/${m}/${y}`);
+}
+
 export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentAlarmModalProps) {
   const router = useRouter();
   const [alerts, setAlerts] = useState<UrgentAlert[]>(initialAlerts);
@@ -212,7 +218,7 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
         isHumanSupport ? "from-emerald-600/30" : "from-red-600/30"
       }`} />
 
-      <div className={`relative w-full max-w-lg rounded-3xl bg-zinc-950/95 border-2 p-6 sm:p-8 space-y-6 shadow-2xl text-center animate-in zoom-in duration-200 ${
+      <div className={`relative w-full max-w-lg max-h-[92dvh] overflow-y-auto rounded-3xl bg-zinc-950/95 border-2 p-5 sm:p-8 space-y-4 sm:space-y-6 shadow-2xl text-center animate-in zoom-in duration-200 ${
         isHumanSupport
           ? "border-emerald-500 shadow-emerald-600/50"
           : "border-red-500 shadow-red-600/50"
@@ -228,7 +234,7 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
         </button>
 
         {/* Icona Allarme a Battito */}
-        <div className={`w-20 h-20 rounded-full border-2 flex items-center justify-center mx-auto shadow-lg animate-bounce ${
+        <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center mx-auto shadow-lg animate-bounce ${
           isHumanSupport
             ? "bg-emerald-600/20 border-emerald-500 text-emerald-400 shadow-emerald-500/40"
             : isUrgentCancellation
@@ -236,17 +242,17 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
             : "bg-red-600/20 border-red-500 text-red-400 shadow-red-500/40"
         }`}>
           {isHumanSupport ? (
-            <MessageSquare className="w-10 h-10" />
+            <MessageSquare className="w-8 h-8 sm:w-10 sm:h-10" />
           ) : isUrgentCancellation ? (
-            <ShieldAlert className="w-10 h-10" />
+            <ShieldAlert className="w-8 h-8 sm:w-10 sm:h-10" />
           ) : (
-            <BellRing className="w-10 h-10" />
+            <BellRing className="w-8 h-8 sm:w-10 sm:h-10" />
           )}
         </div>
 
         {/* Titolo e Dettagli */}
         <div className="space-y-2">
-          <span className={`text-xs uppercase font-extrabold tracking-widest px-3 py-1 rounded-full border ${
+          <span className={`text-[11px] sm:text-xs uppercase font-extrabold tracking-widest px-3 py-1 rounded-full border inline-block ${
             isHumanSupport
               ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
               : isUrgentCancellation
@@ -259,11 +265,11 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
               ? "ALLERTA CRITICA < 24H"
               : "NOTIFICA IN TEMPO REALE"}
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-zinc-100 tracking-tight">
-            {activeAlert.title}
+          <h2 className="text-xl sm:text-3xl font-black text-zinc-100 tracking-tight">
+            {formatItalianAlertDates(activeAlert.title)}
           </h2>
-          <p className="text-base sm:text-lg text-zinc-200 font-medium leading-snug">
-            {activeAlert.message}
+          <p className="text-sm sm:text-lg text-zinc-200 font-medium leading-snug">
+            {formatItalianAlertDates(activeAlert.message)}
           </p>
         </div>
 
@@ -280,7 +286,7 @@ export function UrgentAlarmModal({ initialAlerts = [], onOpenLiveChat }: UrgentA
             type="button"
             disabled={isProcessing}
             onClick={handleAcknowledge}
-            className={`w-full py-5 px-6 rounded-2xl text-lg sm:text-xl font-extrabold uppercase tracking-wide text-white shadow-2xl active:scale-95 transition-all duration-150 flex items-center justify-center gap-3 border-2 ${
+            className={`w-full py-4 sm:py-5 px-4 sm:px-6 rounded-2xl text-base sm:text-xl font-extrabold uppercase tracking-wide text-white shadow-2xl active:scale-95 transition-all duration-150 flex items-center justify-center gap-2.5 sm:gap-3 border-2 ${
               isHumanSupport
                 ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/60 border-emerald-300"
                 : "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-600/60 border-red-300"
