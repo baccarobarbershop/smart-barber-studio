@@ -240,6 +240,40 @@ export function ChatView({
     scrollToBottom(true);
   }, [messages.length, liveSession?.messages?.length, isLoading, scrollToBottom]);
 
+  // Unione messaggi della chat live del barbiere nella conversazione standard (così non vanno mai persi)
+  const mergeLiveSessionIntoMessages = useCallback((sessionToMerge: LiveChatSession) => {
+    if (!sessionToMerge.messages || sessionToMerge.messages.length === 0) return;
+    const converted: ChatMessage[] = sessionToMerge.messages.map((m) => {
+      if (m.senderRole === "barber") {
+        return {
+          id: m.id,
+          role: "assistant",
+          content: `💈 **Roberto (Barbiere):**\n${m.content}`,
+        };
+      } else if (m.senderRole === "client") {
+        return {
+          id: m.id,
+          role: "user",
+          content: m.content,
+        };
+      } else if (m.senderRole === "system") {
+        return {
+          id: m.id,
+          role: "assistant",
+          content: `ℹ️ ${m.content}`,
+        };
+      } else {
+        return {
+          id: m.id,
+          role: "assistant",
+          content: m.content,
+        };
+      }
+    });
+    setMessages(converted);
+    setHandoffSent(false);
+  }, []);
+
   // Sincronizzazione in tempo reale con polling della chat condivisa
   useEffect(() => {
     let isMounted = true;
@@ -248,7 +282,14 @@ export function ChatView({
       try {
         const s = await getLiveChatSession(activeSessionId);
         if (isMounted && s) {
-          setLiveSession(s);
+          setLiveSession((prev) => {
+            // Se prima il barbiere era attivo e ora la sessione live è conclusa/rilasciata all'AI
+            if (prev?.isBarberActive && !s.isBarberActive) {
+              mergeLiveSessionIntoMessages(s);
+            }
+            return s;
+          });
+
           if (s.isBarberActive) {
             setHandoffSent(true);
           }
@@ -264,7 +305,7 @@ export function ChatView({
       isMounted = false;
       clearInterval(interval);
     };
-  }, [activeSessionId]);
+  }, [activeSessionId, mergeLiveSessionIntoMessages]);
 
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<{
     date: string;
@@ -345,7 +386,8 @@ export function ChatView({
       setHandoffSent(false);
 
       setMessages((prev) => [
-        ...prev,
+        // Rimuoviamo il flag isHandoffNotice dai messaggi precedenti per non lasciare il box attivo fuorviante
+        ...prev.map((m) => (m.isHandoffNotice ? { ...m, isHandoffNotice: false } : m)),
         {
           id: Date.now().toString(),
           role: "assistant",
@@ -364,7 +406,10 @@ export function ChatView({
     try {
       await setBarberActiveStatus(activeSessionId, false);
       const updated = await getLiveChatSession(activeSessionId);
-      setLiveSession(updated);
+      if (updated) {
+        mergeLiveSessionIntoMessages(updated);
+        setLiveSession(updated);
+      }
       setHandoffSent(false);
       router.push("/admin");
     } catch (e) {
@@ -467,12 +512,12 @@ export function ChatView({
     } catch (err: unknown) {
       console.error("Errore chat:", err);
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => m.content.trim() !== ""),
         {
           id: Date.now().toString(),
           role: "assistant",
           content:
-            "Si è verificato un errore di connessione con l'AI. Puoi usare il selettore tradizionale a 14 giorni cliccando sul pulsante in alto.",
+            "Si è verificato un errore momentaneo di connessione. Riprova tra pochi istanti o consulta la sezione Calendario 14 Giorni.",
         },
       ]);
     } finally {
@@ -635,7 +680,11 @@ export function ChatView({
             type="button"
             onClick={async () => {
               await setBarberActiveStatus(activeSessionId, false);
-              setLiveSession((prev) => (prev ? { ...prev, isBarberActive: false } : null));
+              const updated = await getLiveChatSession(activeSessionId);
+              if (updated) {
+                mergeLiveSessionIntoMessages(updated);
+                setLiveSession(updated);
+              }
             }}
             className="text-[11px] text-zinc-300 hover:text-amber-300 underline font-semibold flex items-center gap-1 transition"
           >
@@ -802,7 +851,14 @@ export function ChatView({
                         : "bg-zinc-900/95 border border-zinc-800 text-zinc-100 rounded-tl-sm space-y-3"
                         }`}
                     >
-                      <p className="leading-relaxed whitespace-pre-wrap">{cleanContent}</p>
+                      {cleanContent ? (
+                        <p className="leading-relaxed whitespace-pre-wrap">{cleanContent}</p>
+                      ) : isLoading && idx === messages.length - 1 ? (
+                        <div className="flex items-center gap-2 text-zinc-400 text-xs py-0.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                          <span>L&apos;assistente sta scrivendo...</span>
+                        </div>
+                      ) : null}
 
                       {/* GENERATIVE UI: Slot Proposti con data esatta verificata */}
                       {!isUser && groups.length > 0 && (
@@ -845,39 +901,48 @@ export function ChatView({
                       {/* SCHEDA AZIONE DIRETTA: CONTATTO BARBIERE */}
                       {m.isHandoffNotice && (
                         <div className="pt-2 border-t border-zinc-800 space-y-2.5">
-                          <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-xl">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
-                            <span>Avviso in cassa attivato • In attesa del barbiere</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <a
-                              href={`tel:${salonPhone.replace(/\s+/g, "")}`}
-                              className="py-2.5 px-3 rounded-xl bg-zinc-900 border border-amber-500/40 text-amber-300 font-bold text-center flex items-center justify-center gap-1.5 text-xs hover:bg-amber-500 hover:text-black transition shadow-sm"
-                            >
-                              <Phone className="w-3.5 h-3.5" />
-                              <span>Chiama Salone</span>
-                            </a>
-                            <a
-                              href={`https://wa.me/${whatsappPhone.replace(/\D/g, "")}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-center flex items-center justify-center gap-1.5 text-xs transition shadow-sm"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                              <span>WhatsApp</span>
-                            </a>
-                          </div>
+                          {handoffSent && !liveSession?.isBarberActive ? (
+                            <>
+                              <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-xl">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                                <span>Avviso in cassa attivato • In attesa del barbiere</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <a
+                                  href={`tel:${salonPhone.replace(/\s+/g, "")}`}
+                                  className="py-2.5 px-3 rounded-xl bg-zinc-900 border border-amber-500/40 text-amber-300 font-bold text-center flex items-center justify-center gap-1.5 text-xs hover:bg-amber-500 hover:text-black transition shadow-sm"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                  <span>Chiama Salone</span>
+                                </a>
+                                <a
+                                  href={`https://wa.me/${whatsappPhone.replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-center flex items-center justify-center gap-1.5 text-xs transition shadow-sm"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              </div>
 
-                          {/* Pulsante per ANNULLARE la richiesta e tornare a chattare con l'Assistente */}
-                          <button
-                            type="button"
-                            disabled={handoffLoading}
-                            onClick={handleCancelHumanRequest}
-                            className="w-full py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-500/40 text-zinc-300 hover:text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Annulla Richiesta e Torna all&apos;Assistente</span>
-                          </button>
+                              {/* Pulsante per ANNULLARE la richiesta e tornare a chattare con l'Assistente */}
+                              <button
+                                type="button"
+                                disabled={handoffLoading}
+                                onClick={handleCancelHumanRequest}
+                                className="w-full py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-amber-500/40 text-zinc-300 hover:text-amber-300 text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Annulla Richiesta e Torna all&apos;Assistente</span>
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2 text-[11px] text-zinc-400 bg-zinc-900/60 border border-zinc-800 p-2.5 rounded-xl">
+                              <span className="text-emerald-400 font-bold">✓</span>
+                              <span>Richiesta barbiere conclusa</span>
+                            </div>
+                          )}
                         </div>
                       )}
 
