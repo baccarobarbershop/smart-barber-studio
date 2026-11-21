@@ -117,6 +117,15 @@ barber-app/
 7. **Gestione Dinamica & Recupero del PIN Salone ([src/app/actions/auth.ts](file:///src/app/actions/auth.ts), [src/app/admin/login/page.tsx](file:///src/app/admin/login/page.tsx), [src/components/admin/AdminSettingsView.tsx](file:///src/components/admin/AdminSettingsView.tsx)):**
    - Sostituzione del PIN abilitata dal pannello impostazioni `/admin` con hash crittografico HMAC-SHA256 salvato su Supabase (`business_settings`).
    - Flusso di recupero PIN integrato in `/admin/login` con invio di codice monouso sul WhatsApp personale del titolare Roberto Baccaro (`331 81 76 178`).
+8. **Riorganizzazione Modulare Sotto-Sezioni Impostazioni ([src/components/admin/AdminSettingsView.tsx](file:///src/components/admin/AdminSettingsView.tsx)):**
+   - Eliminato il muro di scroll verticale (oltre 1500 righe in un unico blocco).
+   - Introdotta barra di navigazione a 5 schede specializzate con icone e badge dinamici:
+     - ⏰ **Orari & Turni:** orari settimanali per singolo giorno, orario continuato/pausa pranzo, copia lunedì, durata slot default.
+     - 🌴 **Ferie & Chiusure:** periodo vacanze a intervallo date (con calcolo automatico gg) e chiusure singole con lista e rimozione rapida.
+     - ✂️ **Listino Servizi & Prezzi:** lista trattamenti, modifica inline rapida, aggiunta servizi, ripristino default e opzioni di pagamento.
+     - 🛡️ **Regole & Fedeltà:** preavviso disdetta online, finestra massima di prenotazione futura (duplicato rimosso), configurazione carta fedeltà.
+     - ⚙️ **Recapiti, Suoni & PIN:** telefoni salone, agenda whatsapp titolare, test sonoro campana e modulo cambio PIN.
+   - Aggiunto pulsante di salvataggio rapido in testata e a fondo pagina con feedback immediato per evitare qualsiasi scroll inutile.
 
 ### 🟡 Debito Tecnico Residuo (Non bloccante per il lancio)
 1. **Serializzazione Live-Chat in `business_settings`:** I messaggi chat risiedono in una colonna JSON di `business_settings`. Per volumi elevati, è consigliabile migrarli su una tabella `chat_messages` con Supabase Realtime.
