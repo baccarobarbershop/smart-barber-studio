@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { format, addMinutes, parse, isBefore, isAfter, isEqual } from "date-fns";
+import { format, addMinutes, parse, isBefore, isAfter, isEqual, addDays } from "date-fns";
 import type { BusinessSettings, CalendarException, Appointment } from "@/types/database";
+import { DEFAULT_WEEKLY_SCHEDULE } from "@/types/database";
 
 export interface TimeSlot {
   time: string; // "09:00"
@@ -16,39 +17,39 @@ export interface DayAvailability {
 }
 
 /**
- * Calcola in modo deterministico e rigoroso tutti gli slot orari disponibili per una data specifica.
- * Rispetta:
- * - Orario di apertura e chiusura da business_settings
- * - Durata dello slot configurata (es. 15, 30, 45, 60 min)
- * - Pausa pranzo (lunch_break_start / lunch_break_end)
- * - Giorni lavorativi settimanali (es. 1-6 = Lun-Sab)
- * - Eccezioni da calendar_exceptions (chiusure per ferie/festivi o orari speciali)
- * - Appuntamenti già confermati nel database (usando AdminClient per bypassare RLS e garantire zero allucinazioni)
- * - Orari già passati (se la data è oggi)
+ * Timeout di protezione contro blocchi di rete o istanze Supabase in pausa / non raggiungibili.
  */
-export async function getAvailableSlots(dateString: string): Promise<DayAvailability> {
-  const supabase = createAdminClient();
+function withTimeout<T>(promise: PromiseLike<any>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
-  // 1. Recupera impostazioni del salone
-  const { data: settings } = await supabase
-    .from("business_settings")
-    .select("*")
-    .limit(1)
-    .single();
-
+/**
+ * Calcola in modo puramente deterministico e in-memory gli slot orari per un singolo giorno.
+ * Esecuzione sub-millisecondo senza chiamate di rete.
+ */
+export function computeDayAvailability(
+  dateString: string,
+  settings: Partial<BusinessSettings> | null,
+  exception: CalendarException | null,
+  bookedAppointments: Pick<Appointment, "start_time" | "end_time" | "duration_minutes" | "status">[] | null,
+  now = new Date()
+): DayAvailability {
   const slotDuration = settings?.slot_duration_minutes ?? 30;
-  const workingDays = settings?.working_days ?? [1, 2, 3, 4, 5, 6]; // Lun - Sab
+  const workingDays = settings?.working_days ?? [2, 3, 4, 5, 6]; // Mar - Sab
   let openingTimeStr = settings?.opening_time ?? "09:00:00";
-  let closingTimeStr = settings?.closing_time ?? "19:30:00";
-  let lunchStartStr: string | null = settings?.lunch_break_start ?? "13:00:00";
-  let lunchEndStr: string | null = settings?.lunch_break_end ?? "14:30:00";
+  let closingTimeStr = settings?.closing_time ?? "19:00:00";
+  let lunchStartStr: string | null = settings?.lunch_break_start ?? null;
+  let lunchEndStr: string | null = settings?.lunch_break_end ?? null;
 
-  // 2. Verifica giorno della settimana (0: Domenica, 1: Lunedì, ..., 6: Sabato)
   const targetDate = new Date(`${dateString}T00:00:00`);
   const dayOfWeek = targetDate.getDay();
 
-  // Se è configurato un orario per singolo giorno della settimana:
-  const daySchedule = settings?.daily_schedules?.[dayOfWeek];
+  // Configurazione orari giornalieri
+  const schedules = settings?.daily_schedules || DEFAULT_WEEKLY_SCHEDULE;
+  const daySchedule = schedules?.[dayOfWeek];
   let isStandardClosed = false;
 
   if (daySchedule) {
@@ -64,13 +65,7 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
     isStandardClosed = !workingDays.includes(dayOfWeek);
   }
 
-  // 3. Verifica eccezioni da calendario
-  const { data: exception } = await supabase
-    .from("calendar_exceptions")
-    .select("*")
-    .eq("exception_date", dateString)
-    .maybeSingle();
-
+  // Chiusure speciali / ferie
   if (exception?.is_closed) {
     return {
       date: dateString,
@@ -80,7 +75,7 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
     };
   }
 
-  // Se non c'è eccezione di apertura straordinaria ed è chiuso da orario settimanale
+  // Chiusura ordinaria
   if (isStandardClosed && !exception) {
     return {
       date: dateString,
@@ -90,7 +85,7 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
     };
   }
 
-  // Se c'è un'eccezione con orari custom
+  // Orari custom da eccezione
   if (exception?.custom_opening_time) {
     openingTimeStr = exception.custom_opening_time;
   }
@@ -98,18 +93,6 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
     closingTimeStr = exception.custom_closing_time;
   }
 
-  // 4. Recupera appuntamenti attivi (confermati o completati, non cancellati)
-  const { data: bookedAppointments, error: aptError } = await supabase
-    .from("appointments")
-    .select("start_time, end_time, duration_minutes, status")
-    .eq("appointment_date", dateString)
-    .neq("status", "cancelled");
-
-  if (aptError) {
-    console.error("Errore fetch appuntamenti in getAvailableSlots:", aptError);
-  }
-
-  // 5. Genera la timeline degli slot
   const slots: TimeSlot[] = [];
   const startTime = parse(openingTimeStr.substring(0, 5), "HH:mm", targetDate);
   const closingTime = parse(closingTimeStr.substring(0, 5), "HH:mm", targetDate);
@@ -121,16 +104,13 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
     lunchEnd = parse(lunchEndStr.substring(0, 5), "HH:mm", targetDate);
   }
 
-  const now = new Date();
   const isToday = format(now, "yyyy-MM-dd") === dateString;
-
   let currentSlot = startTime;
 
   while (isBefore(currentSlot, closingTime)) {
     const slotTimeStr = format(currentSlot, "HH:mm");
     const slotEnd = addMinutes(currentSlot, slotDuration);
 
-    // Controlla se lo slot supera l'orario di chiusura
     if (isAfter(slotEnd, closingTime)) {
       break;
     }
@@ -146,20 +126,20 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
       }
     }
 
-    // Controlla se è nel passato (se oggi)
+    // Controlla passato (solo per oggi)
     let isPast = false;
     if (isToday) {
       const slotDateTime = parse(
         `${dateString} ${slotTimeStr}`,
         "yyyy-MM-dd HH:mm",
-        new Date()
+        now
       );
       if (isBefore(slotDateTime, now)) {
         isPast = true;
       }
     }
 
-    // Controlla sovrapposizione con appuntamenti già registrati
+    // Sovrapposizione appuntamenti confermati
     let isBooked = false;
     if (bookedAppointments && bookedAppointments.length > 0) {
       for (const apt of bookedAppointments) {
@@ -170,8 +150,6 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
           ? parse(apt.end_time.substring(0, 5), "HH:mm", targetDate)
           : addMinutes(aptStart, aptDuration);
 
-        // Un intervallo [slotStart, slotEnd) si sovrappone a [aptStart, aptEnd)
-        // se slotStart < aptEnd && slotEnd > aptStart
         if (isBefore(currentSlot, aptEnd) && isAfter(slotEnd, aptStart)) {
           isBooked = true;
           break;
@@ -209,3 +187,114 @@ export async function getAvailableSlots(dateString: string): Promise<DayAvailabi
   };
 }
 
+interface CacheEntry {
+  timestamp: number;
+  data: DayAvailability[];
+}
+
+let rangeCache: { key: string; entry: CacheEntry } | null = null;
+const CACHE_TTL_MS = 25_000; // 25 secondi di cache memoria in-process
+
+export function invalidateSlotsCache() {
+  rangeCache = null;
+}
+
+/**
+ * Recupera la disponibilità per una finestra di giorni (es. 14 giorni)
+ * in sole 3 query batch eseguite in parallelo (anziché N * 3 query separate).
+ * Include timeout di sicurezza anti-freeze e caching rapido in-memory.
+ */
+export async function getAvailableSlotsForRange(
+  startDateStr: string,
+  daysCount: number
+): Promise<DayAvailability[]> {
+  const cacheKey = `${startDateStr}_${daysCount}`;
+  if (
+    rangeCache &&
+    rangeCache.key === cacheKey &&
+    Date.now() - rangeCache.entry.timestamp < CACHE_TTL_MS
+  ) {
+    return rangeCache.entry.data;
+  }
+
+  const supabase = createAdminClient();
+  const startDate = new Date(`${startDateStr}T00:00:00`);
+  const endDate = addDays(startDate, Math.max(1, daysCount) - 1);
+  const endDateStr = format(endDate, "yyyy-MM-dd");
+
+  // Esecuzione concorrente protetta da timeout di 2000ms
+  const [settingsRes, exceptionsRes, appointmentsRes] = await Promise.all([
+    withTimeout(
+      supabase.from("business_settings").select("*").limit(1).maybeSingle(),
+      2000,
+      { data: null, error: null }
+    ).catch(() => ({ data: null, error: null })),
+    withTimeout(
+      supabase
+        .from("calendar_exceptions")
+        .select("*")
+        .gte("exception_date", startDateStr)
+        .lte("exception_date", endDateStr),
+      2000,
+      { data: [], error: null }
+    ).catch(() => ({ data: [], error: null })),
+    withTimeout(
+      supabase
+        .from("appointments")
+        .select("appointment_date, start_time, end_time, duration_minutes, status")
+        .gte("appointment_date", startDateStr)
+        .lte("appointment_date", endDateStr)
+        .neq("status", "cancelled"),
+      2000,
+      { data: [], error: null }
+    ).catch(() => ({ data: [], error: null })),
+  ]);
+
+  const settings = settingsRes?.data as BusinessSettings | null;
+  const exceptionsList = (exceptionsRes?.data || []) as CalendarException[];
+  const appointmentsList = (appointmentsRes?.data || []) as (Appointment & { appointment_date: string })[];
+
+  const exceptionsMap = new Map<string, CalendarException>();
+  for (const exc of exceptionsList) {
+    if (exc.exception_date) exceptionsMap.set(exc.exception_date, exc);
+  }
+
+  const appointmentsMap = new Map<string, Appointment[]>();
+  for (const apt of appointmentsList) {
+    if (apt.appointment_date) {
+      const existing = appointmentsMap.get(apt.appointment_date) || [];
+      existing.push(apt);
+      appointmentsMap.set(apt.appointment_date, existing);
+    }
+  }
+
+  const now = new Date();
+  const result: DayAvailability[] = [];
+
+  for (let i = 0; i < daysCount; i++) {
+    const targetDate = addDays(startDate, i);
+    const dateStr = format(targetDate, "yyyy-MM-dd");
+    const exc = exceptionsMap.get(dateStr) || null;
+    const apts = appointmentsMap.get(dateStr) || null;
+
+    result.push(computeDayAvailability(dateStr, settings, exc, apts, now));
+  }
+
+  rangeCache = {
+    key: cacheKey,
+    entry: {
+      timestamp: Date.now(),
+      data: result,
+    },
+  };
+
+  return result;
+}
+
+/**
+ * Calcola gli slot per una singola data, sfruttando la funzione unificata batch e cache.
+ */
+export async function getAvailableSlots(dateString: string): Promise<DayAvailability> {
+  const list = await getAvailableSlotsForRange(dateString, 1);
+  return list[0] || { date: dateString, isClosed: false, slots: [] };
+}

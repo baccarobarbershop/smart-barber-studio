@@ -11,7 +11,8 @@ import {
   addVacationPeriod,
   removeVacationRange,
 } from "@/app/actions/admin";
-import { Clock, Calendar, Gift, CreditCard, Save, CheckCircle2, Loader2, Copy, Sun, Moon, Palmtree, Plus, Trash2, Scissors, RefreshCw, Phone, MessageSquare, MessageCircle, Volume2, Bell } from "lucide-react";
+import { changeAdminPin } from "@/app/actions/auth";
+import { Clock, Calendar, Gift, CreditCard, Save, CheckCircle2, Loader2, Copy, Sun, Moon, Palmtree, Plus, Trash2, Scissors, RefreshCw, Phone, MessageSquare, MessageCircle, Volume2, Bell, Lock, KeyRound, AlertCircle } from "lucide-react";
 import { playLuxuryBookingChime } from "@/lib/sound";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -59,6 +60,47 @@ export function AdminSettingsView({ initialSettings }: AdminSettingsViewProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Gestione Modifica PIN Salone
+  const [newAdminPin, setNewAdminPin] = useState("");
+  const [confirmAdminPin, setConfirmAdminPin] = useState("");
+  const [isChangingPin, setIsChangingPin] = useState(false);
+  const [pinChangeSuccess, setPinChangeSuccess] = useState(false);
+  const [pinChangeError, setPinChangeError] = useState<string | null>(null);
+
+  const handleUpdatePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPinChangeError(null);
+    setPinChangeSuccess(false);
+
+    const clean = newAdminPin.trim();
+    if (!clean || clean.length < 4 || clean.length > 8 || !/^\d+$/.test(clean)) {
+      setPinChangeError("Il nuovo PIN deve contenere tra 4 e 8 cifre numeriche.");
+      return;
+    }
+
+    if (clean !== confirmAdminPin.trim()) {
+      setPinChangeError("I due PIN inseriti non coincidono.");
+      return;
+    }
+
+    setIsChangingPin(true);
+    try {
+      const res = await changeAdminPin(clean);
+      if (!res.success) {
+        setPinChangeError(res.error || "Impossibile aggiornare il PIN.");
+      } else {
+        setPinChangeSuccess(true);
+        setNewAdminPin("");
+        setConfirmAdminPin("");
+        setTimeout(() => setPinChangeSuccess(false), 4000);
+      }
+    } catch {
+      setPinChangeError("Errore durante l'aggiornamento del PIN.");
+    } finally {
+      setIsChangingPin(false);
+    }
+  };
 
   // Gestione Listino Servizi & Trattamenti Personalizzati
   const [services, setServices] = useState<BarberService[]>(() => {
@@ -1416,6 +1458,74 @@ export function AdminSettingsView({ initialSettings }: AdminSettingsViewProps) {
             <Bell className="w-3.5 h-3.5 text-amber-400" />
             <span>🔊 Prova il Tocco Sonoro</span>
           </button>
+        </div>
+      </div>
+
+      {/* 9. SICUREZZA & MODIFICA PIN AREA RISERVATA */}
+      <div className="glass-panel rounded-3xl p-6 border border-amber-500/20 space-y-4">
+        <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+          <KeyRound className="w-4 h-4 text-amber-400" />
+          <span>Sicurezza & Codice PIN Area Riservata</span>
+        </div>
+
+        <p className="text-xs text-zinc-400 leading-relaxed">
+          Sostituisci il PIN personale con cui accedi all&apos;Area Riservata del salone dallo smartphone o dal PC in cassa. Il PIN deve essere composto da 4 a 8 cifre numeriche.
+        </p>
+
+        {pinChangeError && (
+          <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{pinChangeError}</span>
+          </div>
+        )}
+
+        {pinChangeSuccess && (
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>PIN aggiornato con successo! Utilizza il nuovo codice per i prossimi accessi.</span>
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-zinc-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+              Nuovo PIN (4-8 cifre)
+            </label>
+            <input
+              type="password"
+              maxLength={8}
+              placeholder="Es. 7788"
+              value={newAdminPin}
+              onChange={(e) => setNewAdminPin(e.target.value.replace(/\D/g, ""))}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-mono text-center tracking-widest text-sm focus:border-amber-400 outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+              Conferma Nuovo PIN
+            </label>
+            <input
+              type="password"
+              maxLength={8}
+              placeholder="Ripeti PIN"
+              value={confirmAdminPin}
+              onChange={(e) => setConfirmAdminPin(e.target.value.replace(/\D/g, ""))}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-mono text-center tracking-widest text-sm focus:border-amber-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              disabled={isChangingPin || newAdminPin.length < 4}
+              onClick={handleUpdatePin}
+              className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-sm disabled:opacity-40"
+            >
+              {isChangingPin ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+              <span>Aggiorna PIN Salone</span>
+            </button>
+          </div>
         </div>
       </div>
 

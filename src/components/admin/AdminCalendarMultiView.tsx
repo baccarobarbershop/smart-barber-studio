@@ -43,6 +43,7 @@ import {
   getAllClientInternalNotes,
   updateClientInternalNotes,
   fetchClientBadgesMap,
+  getIcalSyncToken,
   type ClientBadgeInfo,
 } from "@/app/actions/admin";
 import { normalizePhoneDigits } from "@/lib/phone";
@@ -102,6 +103,7 @@ export function AdminCalendarMultiView({
   // Stato sincronizzazione calendario smartphone (iCal)
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [copiedSyncUrl, setCopiedSyncUrl] = useState(false);
+  const [syncToken, setSyncToken] = useState<string>("");
 
   // Stato modal prenotazione manuale rapida
   const [manualBookingModal, setManualBookingModal] = useState<{
@@ -187,6 +189,10 @@ export function AdminCalendarMultiView({
 
     fetchClientBadgesMap()
       .then(setClientBadges)
+      .catch(console.error);
+
+    getIcalSyncToken()
+      .then(setSyncToken)
       .catch(console.error);
   }, []);
 
@@ -1506,20 +1512,25 @@ export function AdminCalendarMultiView({
               {/* Box Link iCal con copia rapida */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Link Sottoscrizione Calendario (iCal)
+                  Link Sottoscrizione Calendario Privato (iCal)
                 </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     readOnly
-                    value={typeof window !== "undefined" ? `${window.location.origin}/api/calendar/ical` : "/api/calendar/ical"}
+                    value={
+                      typeof window !== "undefined"
+                        ? `${window.location.origin}/api/calendar/ical${syncToken ? `?token=${syncToken}` : ""}`
+                        : `/api/calendar/ical${syncToken ? `?token=${syncToken}` : ""}`
+                    }
                     className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 font-mono text-[11px] text-amber-300 select-all"
                   />
                   <button
                     type="button"
                     onClick={() => {
                       if (typeof window !== "undefined") {
-                        navigator.clipboard.writeText(`${window.location.origin}/api/calendar/ical`);
+                        const targetUrl = `${window.location.origin}/api/calendar/ical${syncToken ? `?token=${syncToken}` : ""}`;
+                        navigator.clipboard.writeText(targetUrl);
                         setCopiedSyncUrl(true);
                         setTimeout(() => setCopiedSyncUrl(false), 2500);
                       }
@@ -1537,8 +1548,8 @@ export function AdminCalendarMultiView({
                 <a
                   href={`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(
                     typeof window !== "undefined"
-                      ? `${window.location.origin.replace(/^http/, "webcal")}/api/calendar/ical`
-                      : "webcal://smartbarber.local/api/calendar/ical"
+                      ? `${window.location.origin.replace(/^http/, "webcal")}/api/calendar/ical${syncToken ? `?token=${syncToken}` : ""}`
+                      : `webcal://smartbarber.local/api/calendar/ical${syncToken ? `?token=${syncToken}` : ""}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

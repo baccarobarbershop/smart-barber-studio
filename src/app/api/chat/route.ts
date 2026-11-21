@@ -1,12 +1,12 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { streamText } from "ai";
-import { getAvailableSlots } from "@/lib/booking/slots";
+import { getAvailableSlotsForRange } from "@/lib/booking/slots";
 import { checkAndResolveHandoffTimeout } from "@/app/actions/handoff";
 import { getCustomerFidelityCard } from "@/app/actions/fidelity";
 import { getSalonPublicInfo } from "@/app/actions/salon";
 import { checkCustomerNoShowStatus } from "@/app/actions/admin";
 import { getLiveChatSession } from "@/app/actions/live-chat";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
 const google = createGoogleGenerativeAI({
@@ -18,24 +18,59 @@ export async function POST(req: Request) {
     const { messages, userId, customerName, customerPhone } = await req.json();
 
     const now = new Date();
+    const todayStr = format(now, "yyyy-MM-dd");
     const currentDateTimeStr = format(now, "EEEE d MMMM yyyy, HH:mm", { locale: it });
 
-    // 0. Recupero dati fedeltà cliente riconosciuto
-    let clientRecognitionContext = "";
+    const cleanDigits = customerPhone ? customerPhone.replace(/\D/g, "") : "";
+    const activeSessionId = cleanDigits || userId || "live_client";
     const activeName = customerName?.trim() || "";
 
+    // ESECUZIONE PARALLELA CON TIMEOUT PROTETTO (Risolve la lentezza delle query separate)
+    const [
+      cardRes,
+      noShowStatus,
+      liveSession,
+      handoffStatus,
+      salonInfo,
+      rangeAvailability,
+    ] = await Promise.all([
+      customerPhone
+        ? getCustomerFidelityCard(customerPhone).catch(() => ({ success: false }))
+        : Promise.resolve(null),
+      customerPhone
+        ? checkCustomerNoShowStatus(customerPhone).catch(() => ({ isBlocked: false, noShowCount: 0 }))
+        : Promise.resolve({ isBlocked: false, noShowCount: 0 }),
+      getLiveChatSession(activeSessionId).catch(() => null),
+      userId
+        ? checkAndResolveHandoffTimeout(userId).catch(() => ({ aiPaused: false, aiPausedAt: null }))
+        : Promise.resolve({ aiPaused: false, aiPausedAt: null }),
+      getSalonPublicInfo().catch(() => null),
+      getAvailableSlotsForRange(todayStr, 14).catch(() => []),
+    ]);
+
+    // 1. Controllo Human-in-the-Loop, Presa in Carico Barbiere & Timeout automatico
+    if (liveSession?.isBarberActive) {
+      return new Response(
+        "Il barbiere ha preso in carico la chat ed è connesso in salone. I tuoi messaggi vengono recapitati direttamente a lui.",
+        { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+      );
+    }
+
+    if (handoffStatus?.aiPaused) {
+      return new Response(
+        "La richiesta è stata inoltrata al barbiere. Ti risponderà a breve! (Se non risponde entro 3 minuti, riprenderò io ad assisterti).",
+        { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+      );
+    }
+
+    // 2. Recupero dati fedeltà cliente riconosciuto
+    let clientRecognitionContext = "";
     if (customerPhone) {
-      try {
-        const [cardRes, noShowStatus] = await Promise.all([
-          getCustomerFidelityCard(customerPhone),
-          checkCustomerNoShowStatus(customerPhone),
-        ]);
+      const c = cardRes && "card" in cardRes && cardRes.card ? cardRes.card : null;
+      const finalName = activeName || c?.customerName || "Gentile Cliente";
 
-        const c = cardRes.success && cardRes.card ? cardRes.card : null;
-        const finalName = activeName || c?.customerName || "Gentile Cliente";
-
-        if (noShowStatus.isBlocked) {
-          clientRecognitionContext = `
+      if (noShowStatus?.isBlocked) {
+        clientRecognitionContext = `
 STATO SPECIALE CLIENTE: BLOCCATO PER 3 NO-SHOW.
 - Nome cliente: ${finalName}
 - Telefono: ${customerPhone}
@@ -44,8 +79,8 @@ REGOLE TASSATIVE:
 - NON proporre date e NON proporre orari di prenotazione.
 - Spiega con massima educazione ed eleganza che per prenotare il prossimo appuntamento deve contattare direttamente il salone al telefono o via WhatsApp.
 `;
-        } else if (c) {
-          clientRecognitionContext = `
+      } else if (c) {
+        clientRecognitionContext = `
 DATI CLIENTE RICONOSCIUTO (VIP):
 - Nome del cliente: ${finalName}
 - Numero di telefono: ${c.phone}
@@ -56,9 +91,6 @@ REGOLE OBBLIGATORIE PERSONALIZZAZIONE NOME:
 - Rivolgiti SEMPRE al cliente chiamandolo direttamente per nome ("${finalName}") nei saluti e nelle risposte (es. "Certamente ${finalName}!", "Perfetto ${finalName}, ecco le nostre migliori disponibilità:").
 - Fallo sentire un cliente VIP esclusivo e benvenuto!
 `;
-        }
-      } catch (e) {
-        console.error("Errore recupero card cliente in chat:", e);
       }
     } else if (activeName) {
       clientRecognitionContext = `
@@ -68,93 +100,53 @@ DATI CLIENTE:
 `;
     }
 
-    // 1. Controllo Human-in-the-Loop, Presa in Carico Barbiere & Timeout automatico
-    const cleanDigits = customerPhone ? customerPhone.replace(/\D/g, "") : "";
-    const activeSessionId = cleanDigits || userId || "live_client";
-    const liveSession = await getLiveChatSession(activeSessionId);
-
-    if (liveSession?.isBarberActive) {
-      return new Response(
-        "Il barbiere ha preso in carico la chat ed è connesso in salone. I tuoi messaggi vengono recapitati direttamente a lui.",
-        { headers: { "Content-Type": "text/plain; charset=utf-8" } }
-      );
-    }
-
-    if (userId) {
-      const handoffStatus = await checkAndResolveHandoffTimeout(userId);
-      if (handoffStatus.aiPaused) {
-        return new Response(
-          "La richiesta è stata inoltrata al barbiere. Ti risponderà a breve! (Se non risponde entro 3 minuti, riprenderò io ad assisterti).",
-          { headers: { "Content-Type": "text/plain; charset=utf-8" } }
-        );
-      }
-    }
-
-    // 2. Recupero listino prezzi, servizi e finestra di prenotazione dal salone
+    // 3. Recupero listino prezzi, servizi e finestra di prenotazione dal salone
     let salonServicesContext = "";
-    let maxAdvanceDays = 14;
-    try {
-      const salonInfo = await getSalonPublicInfo();
-      if (salonInfo.maxAdvanceDays) {
-        maxAdvanceDays = salonInfo.maxAdvanceDays;
-      }
-      const activeServices = (salonInfo.services || []).filter((s) => s.enabled);
-      if (activeServices.length > 0) {
-        const servicesListStr = activeServices
-          .map(
-            (s) =>
-              `- ${s.name}: ${(s.price_cents / 100).toFixed(2).replace(".00", "")} € (~${s.duration_minutes} min)${
-                s.description ? ` - ${s.description}` : ""
-              }`
-          )
-          .join("\n");
+    const maxAdvanceDays = salonInfo?.maxAdvanceDays || 14;
+    const activeServices = (salonInfo?.services || []).filter((s) => s.enabled);
+    if (activeServices.length > 0) {
+      const servicesListStr = activeServices
+        .map(
+          (s) =>
+            `- ${s.name}: ${(s.price_cents / 100).toFixed(2).replace(".00", "")} € (~${s.duration_minutes} min)${
+              s.description ? ` - ${s.description}` : ""
+            }`
+        )
+        .join("\n");
 
-        salonServicesContext = `
+      salonServicesContext = `
 LISTINO PREZZI E TRATTAMENTI DEL SALONE (FONTE DI VERITÀ UFFICIALE):
 ${servicesListStr}
 `;
-      }
-    } catch (e) {
-      console.error("Errore recupero listino in chat:", e);
     }
 
-    // 2b. Recupero deterministico in tempo reale degli slot liberi da Supabase per i prossimi ${maxAdvanceDays} giorni
-    const dayIndices = Array.from({ length: maxAdvanceDays }, (_, i) => i);
-    const upcomingScheduleResults = await Promise.all(
-      dayIndices.map(async (i) => {
-        const targetDate = addDays(now, i);
-        const dateStr = format(targetDate, "yyyy-MM-dd");
-        const dayLabel = format(targetDate, "EEEE d MMMM", { locale: it });
+    // 4. Formattazione rapida deterministica disponibilità dei giorni
+    const upcomingScheduleResults = rangeAvailability.map((avail) => {
+      const targetDate = new Date(`${avail.date}T00:00:00`);
+      const dayLabel = format(targetDate, "EEEE d MMMM", { locale: it });
 
-        try {
-          const avail = await getAvailableSlots(dateStr);
-          if (avail.isClosed) {
-            return `- ${dayLabel} (${dateStr}): CHIUSO (${avail.closureReason || "Ferie / Festivo"})`;
-          } else {
-            const freeSlots = avail.slots.filter((s) => s.available).map((s) => s.time);
-            const bookedSlots = avail.slots.filter((s) => s.reason === "booked").map((s) => s.time);
+      if (avail.isClosed) {
+        return `- ${dayLabel} (${avail.date}): CHIUSO (${avail.closureReason || "Ferie / Festivo"})`;
+      } else {
+        const freeSlots = avail.slots.filter((s) => s.available).map((s) => s.time);
+        const bookedSlots = avail.slots.filter((s) => s.reason === "booked").map((s) => s.time);
 
-            let line = `- ${dayLabel} (${dateStr}): `;
-            if (freeSlots.length === 0) {
-              line += "TUTTO ESAURITO";
-            } else {
-              line += `DISPONIBILI: [${freeSlots.join(", ")}]`;
-            }
-            if (bookedSlots.length > 0) {
-              line += ` | GIÀ PRENOTATI / OCCUPATI (NON DISPONIBILI): [${bookedSlots.join(", ")}]`;
-            }
-            return line;
-          }
-        } catch (e) {
-          console.error("Errore fetch slots per data:", dateStr, e);
-          return `- ${dayLabel} (${dateStr}): Errore caricamento`;
+        let line = `- ${dayLabel} (${avail.date}): `;
+        if (freeSlots.length === 0) {
+          line += "TUTTO ESAURITO";
+        } else {
+          line += `DISPONIBILI: [${freeSlots.join(", ")}]`;
         }
-      })
-    );
+        if (bookedSlots.length > 0) {
+          line += ` | GIÀ PRENOTATI / OCCUPATI (NON DISPONIBILI): [${bookedSlots.join(", ")}]`;
+        }
+        return line;
+      }
+    });
 
     const scheduleContext = upcomingScheduleResults.join("\n");
 
-    // 3. System Prompt Rigoroso (Zero Hallucination Policy)
+    // 5. System Prompt Rigoroso (Zero Hallucination Policy)
     const systemPrompt = `
 Sei l'assistente virtuale ufficiale del prestigioso salone da barbiere "Barbershop Roberto Baccaro" (Barberia "Dal 1958", con sede a Torino in C.so Orbassano 230/a, presso "Wild Effect").
 Contatti Salone: Tel. 331 81 76 178 • WhatsApp: 331 81 76 178.
@@ -191,6 +183,11 @@ ATTENZIONE CRITICA: La data nel tag [[SLOTS:YYYY-MM-DD:...]] deve corrispondere 
 
     const result = streamText({
       model: google("gemini-flash-lite-latest"),
+      providerOptions: {
+        google: {
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      },
       system: systemPrompt,
       messages,
       temperature: 0,

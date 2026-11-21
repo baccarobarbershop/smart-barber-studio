@@ -1,15 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
+import { verifyAdminSignedToken, constantTimeCompare } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Endpoint iCal / Webcal per sincronizzare l'agenda del barbiere direttamente
  * con Google Calendar, Apple Calendar (iPhone/Mac), e Microsoft Outlook.
+ * Protetto da token segreto (passato via query ?token=...) o da sessione Admin autenticata.
  */
 export async function GET(req: NextRequest) {
   try {
+    const token = req.nextUrl.searchParams.get("token");
+    const adminCookie = req.cookies.get("smart_barber_admin_session")?.value;
+    const isCookieValid = verifyAdminSignedToken(adminCookie);
+
+    const expectedToken = process.env.ICAL_SECRET_TOKEN || "baccaro-ical-2026-auth";
+    const isTokenValid = token ? constantTimeCompare(token, expectedToken) : false;
+
+    if (!isCookieValid && !isTokenValid) {
+      return new NextResponse("Accesso non autorizzato. Token iCal mancante o non valido.", {
+        status: 401,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }
+
     const adminClient = createAdminClient();
 
     // Recupera tutti gli appuntamenti attivi (confermati o completati)

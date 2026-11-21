@@ -8,6 +8,16 @@ import fs from "fs";
 import path from "path";
 import type { BusinessSettings, Appointment, CalendarException, BarberService } from "@/types/database";
 import { normalizePhoneDigits } from "@/lib/phone";
+import { invalidateSlotsCache } from "@/lib/booking/slots";
+import { invalidateSalonPublicInfoCache } from "@/app/actions/salon";
+import { isAdminSession } from "@/app/actions/auth";
+
+async function requireAdminSession() {
+  const isAuth = await isAdminSession();
+  if (!isAuth) {
+    throw new Error("Non autorizzato: sessione amministratore non valida o scaduta.");
+  }
+}
 
 function getLocalServicesFilePath() {
   return path.join(process.cwd(), "src", "data", "salon_services.json");
@@ -35,7 +45,8 @@ function writeLocalServices(services: BarberService[]) {
     }
     fs.writeFileSync(filePath, JSON.stringify(services, null, 2), "utf-8");
   } catch (err) {
-    console.error("Errore scrittura local services:", err);
+    // Gestione sicura per ambienti serverless con filesystem in sola lettura (Vercel)
+    console.warn("Avviso: scrittura local services non disponibile in ambiente serverless:", err);
   }
 }
 
@@ -61,7 +72,7 @@ function writeLocalContacts(contacts: { salon_phone?: string; whatsapp_phone?: s
     };
     fs.writeFileSync(filePath, JSON.stringify(updated, null, 2), "utf-8");
   } catch (err) {
-    console.error("Errore scrittura local contacts:", err);
+    console.warn("Avviso: scrittura local contacts non disponibile in ambiente serverless:", err);
   }
 }
 
@@ -90,7 +101,7 @@ function writeAllInternalNotes(data: Record<string, string>) {
     }
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
   } catch (e) {
-    console.error("Errore scrittura client_internal_notes.json:", e);
+    console.warn("Avviso: scrittura client_internal_notes non disponibile in ambiente serverless:", e);
   }
 }
 
@@ -98,7 +109,26 @@ function writeAllInternalNotes(data: Record<string, string>) {
  * Recupera tutte le note interne riservate del barbiere, indicizzate per numero di telefono (cifre pulite).
  */
 export async function getAllClientInternalNotes(): Promise<Record<string, string>> {
-  return readAllInternalNotes();
+  await requireAdminSession();
+  const notes = { ...readAllInternalNotes() };
+  try {
+    const adminClient = createAdminClient();
+    const { data } = await adminClient
+      .from("profiles")
+      .select("phone, internal_notes")
+      .not("internal_notes", "is", null);
+    if (data) {
+      for (const p of data) {
+        const digits = normalizePhoneDigits(p.phone);
+        if (digits && (p as any).internal_notes) {
+          notes[digits] = (p as any).internal_notes;
+        }
+      }
+    }
+  } catch {
+    // Fallback pulito alle note memorizzate localmente
+  }
+  return notes;
 }
 
 /**
@@ -108,6 +138,7 @@ export async function updateClientInternalNotes(
   phone: string,
   notes: string
 ): Promise<{ success: boolean; notes: string; error?: string }> {
+  await requireAdminSession();
   const digits = (phone || "").replace(/\D/g, "");
   if (!digits) {
     return { success: false, notes: "", error: "Numero di telefono non valido." };
@@ -129,13 +160,14 @@ export async function updateClientInternalNotes(
       .update({ internal_notes: trimmed || null } as any)
       .eq("phone", phone);
   } catch {
-    // Il file locale funge da storage primario sicuro e persistente
+    // Il file locale funge da fallback
   }
 
   return { success: true, notes: trimmed };
 }
 
 export async function getAdminSettings(): Promise<BusinessSettings | null> {
+  await requireAdminSession();
   const supabase = await createClient();
   const { data } = await supabase
     .from("business_settings")
@@ -161,6 +193,7 @@ export async function getAdminSettings(): Promise<BusinessSettings | null> {
 export async function updateAdminSettings(
   updated: Partial<BusinessSettings>
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAdminSession();
   // Salva sempre i servizi in cache locale sincronizzata per reattività garantita
   if (updated.services && Array.isArray(updated.services)) {
     writeLocalServices(updated.services as BarberService[]);
@@ -202,6 +235,8 @@ export async function updateAdminSettings(
         .eq("id", "00000000-0000-0000-0000-000000000001");
 
       if (retryError) return { success: false, error: retryError.message };
+      invalidateSlotsCache();
+      invalidateSalonPublicInfoCache();
       revalidatePath("/");
       revalidatePath("/admin");
       revalidatePath("/chat");
@@ -211,6 +246,8 @@ export async function updateAdminSettings(
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
+  invalidateSalonPublicInfoCache();
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/chat");
@@ -223,6 +260,7 @@ export async function fetchCalendarOverview(params: {
   month?: number; // 1-12
   date?: string; // YYYY-MM-DD
 }): Promise<Appointment[]> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   let query = adminClient
@@ -262,6 +300,7 @@ export async function fetchCalendarOverview(params: {
 export async function completeAppointment(
   appointmentId: string
 ): Promise<{ success: boolean; pointsAwarded?: number; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   // 1. Recupera l'appuntamento
@@ -374,6 +413,7 @@ export async function fetchClientsFidelityList(): Promise<
     updated_at: string;
   }>
 > {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   const { data: profiles, error } = await adminClient
@@ -438,6 +478,7 @@ export interface ClientBadgeInfo {
  * basandosi sugli appuntamenti completati e sui punti fedeltà nel database.
  */
 export async function fetchClientBadgesMap(): Promise<Record<string, ClientBadgeInfo>> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   const { data: apts, error: aptsErr } = await adminClient
@@ -525,6 +566,7 @@ export async function adjustClientFidelityPoints(
   profileId: string,
   delta: number
 ): Promise<{ success: boolean; newPoints?: number; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   const { data: profile, error: fetchErr } = await adminClient
@@ -561,6 +603,7 @@ export async function adjustClientFidelityPoints(
 export async function redeemClientReward(
   profileId: string
 ): Promise<{ success: boolean; newPoints?: number; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   // Recupera impostazioni salone per conoscere il target
@@ -604,6 +647,7 @@ export async function redeemClientReward(
 export async function cancelAppointmentByAdmin(
   appointmentId: string
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   const { error } = await adminClient
@@ -618,6 +662,7 @@ export async function cancelAppointmentByAdmin(
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
   return { success: true };
 }
 
@@ -626,6 +671,7 @@ export async function cancelAppointmentByAdmin(
  * che risultano ancora in stato 'confirmed' e non sono ancora stati evasi o confermati dal barbiere.
  */
 export async function checkUnconfirmedPastAppointments(): Promise<Appointment[]> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
   const now = new Date();
   const todayStr = format(now, "yyyy-MM-dd");
@@ -664,6 +710,7 @@ export async function checkUnconfirmedPastAppointments(): Promise<Appointment[]>
 export async function batchCompleteAppointments(
   appointmentIds: string[]
 ): Promise<{ success: boolean; completedCount: number }> {
+  await requireAdminSession();
   let count = 0;
   for (const id of appointmentIds) {
     const res = await completeAppointment(id);
@@ -680,6 +727,7 @@ export async function batchCompleteAppointments(
 export async function markAppointmentNoShow(
   appointmentId: string
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   const { error } = await adminClient
@@ -694,6 +742,7 @@ export async function markAppointmentNoShow(
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
   return { success: true };
 }
 
@@ -701,6 +750,7 @@ export async function markAppointmentNoShow(
  * Recupera l'elenco delle chiusure straordinarie, festività e ferie.
  */
 export async function fetchCalendarExceptions(): Promise<CalendarException[]> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
   const { data, error } = await adminClient
     .from("calendar_exceptions")
@@ -722,6 +772,7 @@ export async function addCalendarException(input: {
   reason: string;
   is_closed?: boolean;
 }): Promise<{ success: boolean; error?: string; exception?: CalendarException }> {
+  await requireAdminSession();
   if (!input.exception_date) {
     return { success: false, error: "Data non valida." };
   }
@@ -745,6 +796,8 @@ export async function addCalendarException(input: {
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
+  invalidateSalonPublicInfoCache();
   return { success: true, exception: data };
 }
 
@@ -757,6 +810,7 @@ export async function addVacationPeriod(input: {
   endDate: string;
   reason: string;
 }): Promise<{ success: boolean; count?: number; error?: string }> {
+  await requireAdminSession();
   if (!input.startDate || !input.endDate) {
     return { success: false, error: "Data di inizio e data di fine sono obbligatorie." };
   }
@@ -802,6 +856,8 @@ export async function addVacationPeriod(input: {
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
+  invalidateSalonPublicInfoCache();
   return { success: true, count: rows.length };
 }
 
@@ -812,6 +868,7 @@ export async function removeVacationRange(input: {
   startDate: string;
   endDate: string;
 }): Promise<{ success: boolean; error?: string }> {
+  await requireAdminSession();
   if (!input.startDate || !input.endDate) {
     return { success: false, error: "Date non valide per la rimozione." };
   }
@@ -828,6 +885,8 @@ export async function removeVacationRange(input: {
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
+  invalidateSalonPublicInfoCache();
   return { success: true };
 }
 
@@ -837,6 +896,7 @@ export async function removeVacationRange(input: {
 export async function removeCalendarException(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
   const { error } = await adminClient
     .from("calendar_exceptions")
@@ -848,6 +908,8 @@ export async function removeCalendarException(
     return { success: false, error: error.message };
   }
 
+  invalidateSlotsCache();
+  invalidateSalonPublicInfoCache();
   return { success: true };
 }
 
@@ -912,6 +974,7 @@ export async function quickBlockSlot(input: {
   durationMinutes?: number;
   reason?: string;
 }): Promise<{ success: boolean; appointmentId?: string; error?: string }> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
   const duration = input.durationMinutes || 30;
   const startTime = `${input.time.substring(0, 5)}:00`;
@@ -952,6 +1015,7 @@ export async function quickBlockSlot(input: {
       return { success: false, error: error.message };
     }
 
+    invalidateSlotsCache();
     return { success: true, appointmentId: data.id };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Errore durante il blocco dello slot";
@@ -966,6 +1030,7 @@ export async function quickBlockSlot(input: {
 export async function quickUnblockSlot(
   appointmentId: string
 ): Promise<{ success: boolean; error?: string }> {
+  await requireAdminSession();
   return cancelAppointmentByAdmin(appointmentId);
 }
 
@@ -982,6 +1047,7 @@ export async function quickManualBooking(input: {
   durationMinutes?: number;
   notes?: string;
 }): Promise<{ success: boolean; appointmentId?: string; error?: string }> {
+  await requireAdminSession();
   if (!input.customerName || input.customerName.trim().length === 0) {
     return { success: false, error: "Inserisci il nome del cliente." };
   }
@@ -1059,6 +1125,7 @@ export async function quickManualBooking(input: {
       return { success: false, error: error.message };
     }
 
+    invalidateSlotsCache();
     return { success: true, appointmentId: data.id };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Errore durante la prenotazione manuale";
@@ -1118,6 +1185,7 @@ export async function checkCustomerNoShowStatus(phone: string): Promise<{
 export async function resetCustomerNoShows(
   phone: string
 ): Promise<{ success: boolean; pardonedCount?: number; error?: string }> {
+  await requireAdminSession();
   if (!phone) return { success: false, error: "Numero di cellulare non specificato." };
 
   const cleanPhone = phone.trim().replace(/\s+/g, "");
@@ -1154,5 +1222,14 @@ export async function resetCustomerNoShows(
   }
 
   return { success: true, pardonedCount: count };
+}
+
+/**
+ * Restituisce il token segreto per la sincronizzazione del calendario iCal.
+ * Riservato esclusivamente alla sessione autenticata dell'amministratore.
+ */
+export async function getIcalSyncToken(): Promise<string> {
+  await requireAdminSession();
+  return process.env.ICAL_SECRET_TOKEN || "baccaro-ical-2026-auth";
 }
 

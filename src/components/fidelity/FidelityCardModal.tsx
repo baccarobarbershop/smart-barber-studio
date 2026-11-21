@@ -146,13 +146,12 @@ export function FidelityCardModal({
                     return (
                       <div
                         key={idx}
-                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border ${
-                          isStamped
-                            ? "bg-amber-500/20 border-amber-400 text-amber-300 shadow-md shadow-amber-500/20 scale-105"
-                            : isLast
+                        className={`aspect-square rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border ${isStamped
+                          ? "bg-amber-500/20 border-amber-400 text-amber-300 shadow-md shadow-amber-500/20 scale-105"
+                          : isLast
                             ? "bg-amber-500/5 border-dashed border-amber-500/40 text-amber-500/40"
                             : "bg-zinc-900/60 border-dashed border-zinc-800 text-zinc-700"
-                        }`}
+                          }`}
                       >
                         {isStamped ? (
                           isLast ? (

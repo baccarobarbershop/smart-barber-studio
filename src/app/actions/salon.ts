@@ -33,6 +33,20 @@ function readLocalContacts(): { salon_phone: string; whatsapp_phone: string } {
   return { salon_phone: "331 81 76 178", whatsapp_phone: "331 81 76 178" };
 }
 
+function withTimeout<T>(promise: PromiseLike<any>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
+let cachedSalonInfo: { data: SalonPublicInfo; timestamp: number } | null = null;
+const SALON_INFO_TTL_MS = 30_000;
+
+export async function invalidateSalonPublicInfoCache() {
+  cachedSalonInfo = null;
+}
+
 export interface SalonPublicInfo {
   services: BarberService[];
   weeklySchedule: WeeklySchedule;
@@ -47,6 +61,10 @@ export interface SalonPublicInfo {
 }
 
 export async function getSalonPublicInfo(): Promise<SalonPublicInfo> {
+  if (cachedSalonInfo && Date.now() - cachedSalonInfo.timestamp < SALON_INFO_TTL_MS) {
+    return cachedSalonInfo.data;
+  }
+
   const supabase = await createClient();
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -68,12 +86,25 @@ export async function getSalonPublicInfo(): Promise<SalonPublicInfo> {
   let maxAdvanceDays = 14;
 
   try {
-    const { data: settings } = await supabase
-      .from("business_settings")
-      .select("*")
-      .limit(1)
-      .single();
+    const [settingsRes, excRes] = await Promise.all([
+      withTimeout(
+        supabase.from("business_settings").select("*").limit(1).maybeSingle(),
+        2000,
+        { data: null, error: null }
+      ).catch(() => ({ data: null, error: null })),
+      withTimeout(
+        supabase
+          .from("calendar_exceptions")
+          .select("*")
+          .gte("exception_date", todayStr)
+          .order("exception_date", { ascending: true })
+          .limit(5),
+        2000,
+        { data: [], error: null }
+      ).catch(() => ({ data: [], error: null })),
+    ]);
 
+    const settings = settingsRes?.data as BusinessSettings | null;
     if (settings) {
       if ((settings as any).salon_phone) salonPhone = (settings as any).salon_phone;
       if ((settings as any).whatsapp_phone) whatsappPhone = (settings as any).whatsapp_phone;
@@ -105,37 +136,42 @@ export async function getSalonPublicInfo(): Promise<SalonPublicInfo> {
         basePriceCents = settings.slot_price_cents;
       }
     }
+
+    const upcomingExceptions = (excRes?.data || []) as CalendarException[];
+
+    const result: SalonPublicInfo = {
+      services,
+      weeklySchedule,
+      upcomingExceptions,
+      fidelityCardEnabled,
+      fidelityRewardDescription,
+      fidelityTargetPoints,
+      basePriceCents,
+      salonPhone,
+      whatsappPhone,
+      maxAdvanceDays,
+    };
+
+    cachedSalonInfo = {
+      data: result,
+      timestamp: Date.now(),
+    };
+
+    return result;
   } catch (err) {
     console.error("Errore fetch salon settings in getSalonPublicInfo:", err);
+    return {
+      services,
+      weeklySchedule,
+      upcomingExceptions: [],
+      fidelityCardEnabled,
+      fidelityRewardDescription,
+      fidelityTargetPoints,
+      basePriceCents,
+      salonPhone,
+      whatsappPhone,
+      maxAdvanceDays,
+    };
   }
-
-  let upcomingExceptions: CalendarException[] = [];
-  try {
-    const { data: excData } = await supabase
-      .from("calendar_exceptions")
-      .select("*")
-      .gte("exception_date", todayStr)
-      .order("exception_date", { ascending: true })
-      .limit(5);
-
-    if (excData) {
-      upcomingExceptions = excData as CalendarException[];
-    }
-  } catch (err) {
-    console.error("Errore fetch exceptions in getSalonPublicInfo:", err);
-  }
-
-  return {
-    services,
-    weeklySchedule,
-    upcomingExceptions,
-    fidelityCardEnabled,
-    fidelityRewardDescription,
-    fidelityTargetPoints,
-    basePriceCents,
-    salonPhone,
-    whatsappPhone,
-    maxAdvanceDays,
-  };
 }
 

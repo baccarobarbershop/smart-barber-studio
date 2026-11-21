@@ -1,6 +1,9 @@
 "use server";
 
 import { cookies } from "next/headers";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCustomerFidelityCard } from "@/app/actions/fidelity";
 import { sendWhatsAppOtpMessage } from "@/app/actions/whatsapp";
@@ -25,6 +28,106 @@ const adminBruteForce = {
   failedCount: 0,
   lockUntil: 0,
 };
+
+// Store temporaneo per recupero PIN admin
+const adminRecoveryStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
+
+function hashPin(pin: string): string {
+  const salt = process.env.ADMIN_SESSION_SECRET || "smart-barber-luxury-salt-2026";
+  return crypto.createHmac("sha256", salt).update(pin.trim()).digest("hex");
+}
+
+function getAdminSecurityFilePath() {
+  return path.join(process.cwd(), "src", "data", "admin_security.json");
+}
+
+function readStoredAdminPinHash(): string | null {
+  try {
+    const filePath = getAdminSecurityFilePath();
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      if (data && typeof data.pin_hash === "string") {
+        return data.pin_hash;
+      }
+    }
+  } catch (err) {
+    console.warn("Avviso lettura admin_security.json:", err);
+  }
+  return null;
+}
+
+async function getEffectiveAdminPinHash(): Promise<{ hash: string; isDefault: boolean }> {
+  // 1. Cerca su Supabase business_settings
+  try {
+    const adminClient = createAdminClient();
+    const { data } = await adminClient
+      .from("business_settings")
+      .select("daily_schedules")
+      .eq("id", "00000000-0000-0000-0000-000000000001")
+      .maybeSingle();
+
+    if (data?.daily_schedules && typeof data.daily_schedules === "object") {
+      const sched = data.daily_schedules as Record<string, unknown>;
+      if (sched._admin_pin_hash && typeof sched._admin_pin_hash === "string") {
+        return { hash: sched._admin_pin_hash, isDefault: false };
+      }
+    }
+  } catch {}
+
+  // 2. Cerca nel file locale
+  const localHash = readStoredAdminPinHash();
+  if (localHash) {
+    return { hash: localHash, isDefault: false };
+  }
+
+  // 3. Fallback sul PIN configurato da environment o default '7788'
+  const fallbackPin = process.env.ADMIN_PIN || DEFAULT_PIN;
+  return { hash: hashPin(fallbackPin), isDefault: true };
+}
+
+async function saveAdminPinHash(pinHash: string): Promise<void> {
+  // Salva in locale
+  try {
+    const filePath = getAdminSecurityFilePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify({ pin_hash: pinHash, updated_at: new Date().toISOString() }, null, 2),
+      "utf-8"
+    );
+  } catch (err) {
+    console.warn("Avviso scrittura admin_security.json:", err);
+  }
+
+  // Salva su Supabase
+  try {
+    const adminClient = createAdminClient();
+    const { data } = await adminClient
+      .from("business_settings")
+      .select("daily_schedules")
+      .eq("id", "00000000-0000-0000-0000-000000000001")
+      .maybeSingle();
+
+    const currentSched =
+      data?.daily_schedules && typeof data.daily_schedules === "object"
+        ? (data.daily_schedules as Record<string, unknown>)
+        : {};
+
+    await adminClient
+      .from("business_settings")
+      .update({
+        daily_schedules: {
+          ...currentSched,
+          _admin_pin_hash: pinHash,
+          _admin_pin_updated_at: new Date().toISOString(),
+        },
+      })
+      .eq("id", "00000000-0000-0000-0000-000000000001");
+  } catch (err) {
+    console.warn("Impossibile salvare _admin_pin_hash su Supabase:", err);
+  }
+}
 
 // Memory store per codici OTP (in produzione agganciabile a Meta Cloud API o Supabase Phone Auth)
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
@@ -127,7 +230,7 @@ export async function sendCustomerOtp(
 
   return {
     success: true,
-    simulatedOtp: code,
+    simulatedOtp: process.env.NODE_ENV === "development" ? code : undefined,
     directWhatsAppUrl: waRes.directWhatsAppUrl,
     sentViaApi: waRes.sentViaApi,
   };
@@ -155,29 +258,26 @@ export async function verifyCustomerOtp(
   }
 
   const record = otpStore.get(cleanPhone);
-  const isMasterDevCode = cleanOtp === "123456";
 
-  if (!isMasterDevCode) {
-    if (!record) {
-      recordOtpVerificationAttempt(cleanPhone, false);
-      return { success: false, error: "Codice scaduto o non richiesto. Clicca su Reinvia su WhatsApp." };
-    }
+  if (!record) {
+    recordOtpVerificationAttempt(cleanPhone, false);
+    return { success: false, error: "Codice scaduto o non richiesto. Clicca su Reinvia su WhatsApp." };
+  }
 
-    if (Date.now() > record.expiresAt) {
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(cleanPhone);
+    recordOtpVerificationAttempt(cleanPhone, false);
+    return { success: false, error: "Il codice di verifica WhatsApp è scaduto. Richiedine uno nuovo." };
+  }
+
+  if (record.code !== cleanOtp) {
+    record.attempts++;
+    recordOtpVerificationAttempt(cleanPhone, false);
+    if (record.attempts >= 5) {
       otpStore.delete(cleanPhone);
-      recordOtpVerificationAttempt(cleanPhone, false);
-      return { success: false, error: "Il codice di verifica WhatsApp è scaduto. Richiedine uno nuovo." };
+      return { success: false, error: "Troppi tentativi errati. Accesso temporaneamente bloccato per motivi di sicurezza." };
     }
-
-    if (record.code !== cleanOtp) {
-      record.attempts++;
-      recordOtpVerificationAttempt(cleanPhone, false);
-      if (record.attempts >= 5) {
-        otpStore.delete(cleanPhone);
-        return { success: false, error: "Troppi tentativi errati. Accesso temporaneamente bloccato per motivi di sicurezza." };
-      }
-      return { success: false, error: "Codice errato. Verifica il messaggio su WhatsApp e riprova." };
-    }
+    return { success: false, error: "Codice errato. Verifica il messaggio su WhatsApp e riprova." };
   }
 
   // OTP Valido -> consuma il codice e resetta il contatore errori
@@ -242,7 +342,7 @@ export async function isAdminSession(): Promise<boolean> {
 }
 
 /**
- * Esegue il login dell'Admin verificando il PIN con confronto a tempo costante.
+ * Esegue il login dell'Admin verificando il PIN con confronto crittografico a tempo costante.
  * Applica protezione contro attacchi a forza bruta e imposta un token firmato crittograficamente valido 24 ore.
  */
 export async function loginAdmin(
@@ -259,10 +359,11 @@ export async function loginAdmin(
     };
   }
 
-  const configuredPin = process.env.ADMIN_PIN || DEFAULT_PIN;
+  const effective = await getEffectiveAdminPinHash();
+  const inputHash = hashPin(pin);
 
-  // Confronto a tempo costante per prevenire attacchi di temporizzazione
-  const isMatch = constantTimeCompare(pin, configuredPin);
+  // Confronto a tempo costante dell'hash per prevenire attacchi di temporizzazione
+  const isMatch = constantTimeCompare(inputHash, effective.hash);
 
   if (!isMatch) {
     adminBruteForce.failedCount++;
@@ -287,6 +388,141 @@ export async function loginAdmin(
 
   const cookieStore = await cookies();
   const sessionDuration = 24 * 60 * 60; // 24 ore (scadenza turno di lavoro barbiere)
+  const token = createAdminSignedToken(sessionDuration);
+
+  cookieStore.set(ADMIN_COOKIE_NAME, token, {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: sessionDuration,
+  });
+
+  return { success: true };
+}
+
+/**
+ * Modifica il PIN del salone dall'interfaccia Admin (richiede sessione attiva).
+ */
+export async function changeAdminPin(newPin: string): Promise<{ success: boolean; error?: string }> {
+  const isAuth = await isAdminSession();
+  if (!isAuth) {
+    return { success: false, error: "Non autorizzato: devi aver effettuato l'accesso per cambiare il PIN." };
+  }
+
+  const clean = (newPin || "").trim();
+  if (!clean || clean.length < 4 || clean.length > 8 || !/^\d+$/.test(clean)) {
+    return { success: false, error: "Il nuovo PIN deve contenere tra 4 e 8 cifre numeriche." };
+  }
+
+  const newHash = hashPin(clean);
+  await saveAdminPinHash(newHash);
+
+  return { success: true };
+}
+
+/**
+ * Richiede il recupero del PIN admin inviando un codice di sblocco a 6 cifre al WhatsApp del titolare Roberto Baccaro.
+ */
+export async function requestAdminPinRecovery(): Promise<{
+  success: boolean;
+  error?: string;
+  phone?: string;
+  directWhatsAppUrl?: string;
+}> {
+  const clientIp = await getClientIp();
+  const phone = "331 81 76 178"; // Numero personale del titolare Roberto Baccaro
+  const cleanPhone = "3318176178";
+
+  // Rate limiting specifico per il recupero admin
+  const rateKey = `recovery_${clientIp}`;
+  const verifyLimit = checkOtpVerifyRateLimit(rateKey);
+  if (!verifyLimit.allowed) {
+    return { success: false, error: verifyLimit.error };
+  }
+
+  // Genera codice monouso a 6 cifre
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minuti di validità
+
+  adminRecoveryStore.set("admin_recovery", { code, expiresAt, attempts: 0 });
+
+  const textMsg = encodeURIComponent(
+    `*BARBERSHOP ROBERTO BACCARO - RECUPERO PIN*\n\n` +
+    `Ciao Roberto, il tuo codice di sicurezza per reimpostare il PIN dell'Area Riservata è:\n\n` +
+    `🔑 *${code}*\n\n` +
+    `Questo codice scade tra 10 minuti. Non condividerlo con nessuno.`
+  );
+
+  const directWhatsAppUrl = `https://wa.me/39${cleanPhone}?text=${textMsg}`;
+
+  // Se è configurata la Meta Cloud API, prova a inviarlo automaticamente
+  try {
+    await sendWhatsAppOtpMessage({
+      phone: cleanPhone,
+      customerName: "Roberto Baccaro",
+      otpCode: code,
+    });
+  } catch {}
+
+  return {
+    success: true,
+    phone,
+    directWhatsAppUrl,
+  };
+}
+
+/**
+ * Verifica il codice di sblocco ricevuto dal titolare e imposta il nuovo PIN, effettuando l'accesso diretto.
+ */
+export async function verifyAdminPinRecoveryAndReset(
+  recoveryCode: string,
+  newPin: string
+): Promise<{ success: boolean; error?: string }> {
+  const cleanCode = (recoveryCode || "").trim();
+  const cleanPin = (newPin || "").trim();
+
+  // Verifica se viene usata la Master Recovery Key di emergenza (da environment)
+  const masterKey = process.env.ADMIN_RECOVERY_KEY;
+  const isMasterOverride = masterKey && constantTimeCompare(cleanCode, masterKey);
+
+  if (!isMasterOverride) {
+    const record = adminRecoveryStore.get("admin_recovery");
+    if (!record) {
+      return { success: false, error: "Nessuna richiesta di recupero attiva o codice scaduto. Richiedine uno nuovo." };
+    }
+
+    if (Date.now() > record.expiresAt) {
+      adminRecoveryStore.delete("admin_recovery");
+      return { success: false, error: "Il codice di recupero è scaduto. Richiedine uno nuovo." };
+    }
+
+    if (record.code !== cleanCode) {
+      record.attempts++;
+      if (record.attempts >= 4) {
+        adminRecoveryStore.delete("admin_recovery");
+        return { success: false, error: "Troppi tentativi errati. Richiesta di recupero annullata per sicurezza." };
+      }
+      return { success: false, error: "Codice di recupero errato. Controlla il messaggio su WhatsApp e riprova." };
+    }
+  }
+
+  if (!cleanPin || cleanPin.length < 4 || cleanPin.length > 8 || !/^\d+$/.test(cleanPin)) {
+    return { success: false, error: "Il nuovo PIN deve contenere tra 4 e 8 cifre numeriche." };
+  }
+
+  // Codice valido -> Salva il nuovo PIN
+  adminRecoveryStore.delete("admin_recovery");
+  const newHash = hashPin(cleanPin);
+  await saveAdminPinHash(newHash);
+
+  // Resetta contatore brute force
+  adminBruteForce.failedCount = 0;
+  adminBruteForce.lockUntil = 0;
+
+  // Effettua subito il login impostando il cookie di sessione per comodità del titolare
+  const cookieStore = await cookies();
+  const sessionDuration = 24 * 60 * 60;
   const token = createAdminSignedToken(sessionDuration);
 
   cookieStore.set(ADMIN_COOKIE_NAME, token, {

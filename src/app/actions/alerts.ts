@@ -3,9 +3,18 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { setBarberActiveStatus } from "@/app/actions/live-chat";
+import { isAdminSession } from "@/app/actions/auth";
 import type { UrgentAlert } from "@/types/database";
 
+async function requireAdminSession() {
+  const isAuth = await isAdminSession();
+  if (!isAuth) {
+    throw new Error("Non autorizzato: sessione amministratore non valida o scaduta.");
+  }
+}
+
 export async function fetchPendingAlerts(): Promise<UrgentAlert[]> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
 
   const { data, error } = await adminClient
@@ -37,6 +46,7 @@ export interface AcknowledgeAlertResult {
 }
 
 export async function acknowledgeAlert(alertId: string): Promise<AcknowledgeAlertResult> {
+  await requireAdminSession();
   const adminClient = createAdminClient();
   const supabase = await createClient();
 

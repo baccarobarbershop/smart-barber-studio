@@ -2,8 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Scissors, Lock, ArrowRight, Delete, AlertCircle, ArrowLeft } from "lucide-react";
-import { loginAdmin } from "@/app/actions/auth";
+import {
+  ShieldCheck,
+  Scissors,
+  Lock,
+  ArrowRight,
+  Delete,
+  AlertCircle,
+  ArrowLeft,
+  KeyRound,
+  MessageCircle,
+  ExternalLink,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
+import {
+  loginAdmin,
+  requestAdminPinRecovery,
+  verifyAdminPinRecoveryAndReset,
+} from "@/app/actions/auth";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
@@ -11,6 +28,16 @@ export default function AdminLoginPage() {
   const [pin, setPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Stato Recupero PIN dimenticato
+  const [viewMode, setViewMode] = useState<"login" | "recovery">("login");
+  const [recoverySent, setRecoverySent] = useState(false);
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [directWhatsAppUrl, setDirectWhatsAppUrl] = useState<string | null>(null);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [recoverySuccess, setRecoverySuccess] = useState<string | null>(null);
 
   const handleKeyPress = (num: string) => {
     if (pin.length < 8) {
@@ -47,8 +74,65 @@ export default function AdminLoginPage() {
         router.push("/admin");
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setErrorMessage("Errore durante l'autenticazione.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRequestRecovery = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await requestAdminPinRecovery();
+      if (!res.success) {
+        setErrorMessage(res.error || "Impossibile inviare il codice di recupero.");
+      } else {
+        setRecoverySent(true);
+        setRecoveryPhone(res.phone || "331 81 76 178");
+        setDirectWhatsAppUrl(res.directWhatsAppUrl || null);
+      }
+    } catch {
+      setErrorMessage("Errore durante la richiesta di recupero.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyAndReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (!recoveryCode.trim()) {
+      setErrorMessage("Inserisci il codice di sicurezza ricevuto.");
+      return;
+    }
+
+    if (!newPin || newPin.length < 4 || newPin.length > 8 || !/^\d+$/.test(newPin)) {
+      setErrorMessage("Il nuovo PIN deve contenere tra 4 e 8 cifre numeriche.");
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      setErrorMessage("I due PIN inseriti non coincidono.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await verifyAdminPinRecoveryAndReset(recoveryCode, newPin);
+      if (!res.success) {
+        setErrorMessage(res.error || "Impossibile reimpostare il PIN.");
+      } else {
+        setRecoverySuccess("PIN reimpostato con successo! Accesso in corso...");
+        setTimeout(() => {
+          router.push("/admin");
+          router.refresh();
+        }, 1200);
+      }
+    } catch {
+      setErrorMessage("Errore durante la reimpostazione del PIN.");
     } finally {
       setIsLoading(false);
     }
@@ -74,85 +158,237 @@ export default function AdminLoginPage() {
           </span>
         </div>
 
-        <div className="text-center space-y-1.5">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto shadow-inner">
-            <Scissors className="w-7 h-7" />
-          </div>
-          <h2 className="text-xl font-black text-zinc-100">Area Riservata Barbiere</h2>
-          <p className="text-xs text-zinc-400">
-            Inserisci il codice di sicurezza del salone per accedere all&apos;agenda e alla gestione.
-          </p>
-        </div>
+        {viewMode === "login" ? (
+          <>
+            <div className="text-center space-y-1.5">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto shadow-inner">
+                <Scissors className="w-7 h-7" />
+              </div>
+              <h2 className="text-xl font-black text-zinc-100">Area Riservata Barbiere</h2>
+              <p className="text-xs text-zinc-400">
+                Inserisci il PIN del salone per accedere all&apos;agenda e alla gestione.
+              </p>
+            </div>
 
-        {errorMessage && (
-          <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-            <span>{errorMessage}</span>
+            {errorMessage && (
+              <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Display PIN con pallini oscurati */}
+            <div className="flex justify-center items-center gap-3 py-2">
+              {Array.from({ length: 4 }).map((_, idx) => {
+                const isFilled = idx < pin.length;
+                return (
+                  <div
+                    key={idx}
+                    className={`w-4 h-4 rounded-full transition-all duration-150 border ${
+                      isFilled
+                        ? "bg-amber-400 border-amber-300 scale-110 shadow-md shadow-amber-400/50"
+                        : "bg-zinc-900 border-zinc-700"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Tastierino Numerico Touch-Friendly per smartphone */}
+            <div className="grid grid-cols-3 gap-2.5 pt-2">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleKeyPress(num)}
+                  className="py-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-lg font-bold text-zinc-100 active:scale-95 transition"
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={handleClear}
+                className="py-3.5 rounded-2xl bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 text-xs font-semibold text-zinc-400 active:scale-95 transition"
+              >
+                Canc
+              </button>
+              <button
+                type="button"
+                onClick={() => handleKeyPress("0")}
+                className="py-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-lg font-bold text-zinc-100 active:scale-95 transition"
+              >
+                0
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="py-3.5 rounded-2xl bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center active:scale-95 transition"
+              >
+                <Delete className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Pulsante Conferma */}
+            <button
+              type="button"
+              disabled={isLoading || pin.length < 4}
+              onClick={() => handleSubmit()}
+              className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 disabled:opacity-40"
+            >
+              <span>Accedi al Pannello</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            {/* Link Recupero PIN Dimenticato */}
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode("recovery");
+                  setErrorMessage(null);
+                  setRecoverySent(false);
+                }}
+                className="text-xs text-zinc-400 hover:text-amber-400 transition underline underline-offset-4 flex items-center justify-center gap-1.5 mx-auto"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <span>Hai dimenticato il PIN? Recuperalo via WhatsApp</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Vista Recupero PIN Dimenticato */
+          <div className="space-y-4">
+            <div className="text-center space-y-1.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
+                <KeyRound className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-black text-zinc-100">Recupero PIN Titolare</h2>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Il codice di sicurezza verrà inviato sul WhatsApp del titolare Roberto Baccaro (331 81 76 178).
+              </p>
+            </div>
+
+            {errorMessage && (
+              <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {recoverySuccess && (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{recoverySuccess}</span>
+              </div>
+            )}
+
+            {!recoverySent ? (
+              <div className="space-y-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={handleRequestRecovery}
+                  className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                  <span>Invia Codice su WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode("login");
+                    setErrorMessage(null);
+                  }}
+                  className="w-full py-2.5 text-xs text-zinc-400 hover:text-zinc-200 transition text-center"
+                >
+                  ← Torna al login
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleVerifyAndReset} className="space-y-3.5 pt-1">
+                {directWhatsAppUrl && (
+                  <a
+                    href={directWhatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 flex items-center justify-center gap-2 text-xs font-semibold transition"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Apri WhatsApp per leggere il codice</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+                    Codice di Verifica (6 cifre)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="Es. 849201"
+                    value={recoveryCode}
+                    onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ""))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-mono text-center text-lg tracking-widest focus:border-amber-400 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+                    Nuovo PIN Personale (4-8 cifre)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    maxLength={8}
+                    placeholder="Nuovo PIN (es. 7788)"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-mono text-center text-lg tracking-widest focus:border-amber-400 outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+                    Conferma Nuovo PIN
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    maxLength={8}
+                    placeholder="Ripeti il nuovo PIN"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 font-mono text-center text-lg tracking-widest focus:border-amber-400 outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>Salva Nuovo PIN & Accedi</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode("login");
+                    setErrorMessage(null);
+                  }}
+                  className="w-full py-2 text-xs text-zinc-400 hover:text-zinc-200 transition text-center"
+                >
+                  ← Annulla e torna al login
+                </button>
+              </form>
+            )}
           </div>
         )}
-
-        {/* Display PIN con pallini oscurati */}
-        <div className="flex justify-center items-center gap-3 py-2">
-          {Array.from({ length: 4 }).map((_, idx) => {
-            const isFilled = idx < pin.length;
-            return (
-              <div
-                key={idx}
-                className={`w-4 h-4 rounded-full transition-all duration-150 border ${
-                  isFilled
-                    ? "bg-amber-400 border-amber-300 scale-110 shadow-md shadow-amber-400/50"
-                    : "bg-zinc-900 border-zinc-700"
-                }`}
-              />
-            );
-          })}
-        </div>
-
-        {/* Tastierino Numerico Touch-Friendly per smartphone */}
-        <div className="grid grid-cols-3 gap-2.5 pt-2">
-          {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
-            <button
-              key={num}
-              type="button"
-              onClick={() => handleKeyPress(num)}
-              className="py-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-lg font-bold text-zinc-100 active:scale-95 transition"
-            >
-              {num}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={handleClear}
-            className="py-3.5 rounded-2xl bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 text-xs font-semibold text-zinc-400 active:scale-95 transition"
-          >
-            Canc
-          </button>
-          <button
-            type="button"
-            onClick={() => handleKeyPress("0")}
-            className="py-3.5 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-lg font-bold text-zinc-100 active:scale-95 transition"
-          >
-            0
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="py-3.5 rounded-2xl bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center active:scale-95 transition"
-          >
-            <Delete className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Pulsante Conferma */}
-        <button
-          type="button"
-          disabled={isLoading || pin.length < 4}
-          onClick={() => handleSubmit()}
-          className="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 disabled:opacity-40"
-        >
-          <span>Accedi al Pannello</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
       </div>
     </main>
   );

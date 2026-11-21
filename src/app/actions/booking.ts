@@ -9,6 +9,7 @@ import {
   sendWhatsAppCancellationIntentAlert,
 } from "@/app/actions/whatsapp";
 import { checkCustomerNoShowStatus } from "@/app/actions/admin";
+import { invalidateSlotsCache } from "@/lib/booking/slots";
 import type { PaymentMethod } from "@/types/database";
 
 function formatDateItalianStr(dateStr: string): string {
@@ -272,6 +273,8 @@ export async function bookAppointment(
     console.warn("Impossibile inviare notifica WhatsApp barbiere:", err);
   }
 
+  invalidateSlotsCache();
+
   return {
     success: true,
     appointmentId: appointment.id,
@@ -442,6 +445,8 @@ export async function cancelAppointmentByClient(input: {
     status: "pending",
   });
 
+  invalidateSlotsCache();
+
   return { success: true };
 }
 
@@ -590,6 +595,8 @@ export async function rescheduleAppointmentByClient(input: {
     message: `${apt.customer_name} (${apt.customer_phone}) ha SPOSTATO l'appuntamento dal ${formatDateItalianStr(oldDate)} ore ${oldTime} al NUOVO ORARIO: ${formatDateItalianStr(newDate)} ore ${newTime}!`,
     status: "pending",
   });
+
+  invalidateSlotsCache();
 
   return { success: true };
 }
