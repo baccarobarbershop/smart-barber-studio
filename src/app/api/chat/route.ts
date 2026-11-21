@@ -183,11 +183,6 @@ ATTENZIONE CRITICA: La data nel tag [[SLOTS:YYYY-MM-DD:...]] deve corrispondere 
 
     const result = streamText({
       model: google("gemini-flash-lite-latest"),
-      providerOptions: {
-        google: {
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      },
       system: systemPrompt,
       messages,
       temperature: 0,
