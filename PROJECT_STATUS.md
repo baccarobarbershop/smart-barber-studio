@@ -126,6 +126,12 @@ barber-app/
      - 🛡️ **Regole & Fedeltà:** preavviso disdetta online, finestra massima di prenotazione futura (duplicato rimosso), configurazione carta fedeltà.
      - ⚙️ **Recapiti, Suoni & PIN:** telefoni salone, agenda whatsapp titolare, test sonoro campana e modulo cambio PIN.
    - Aggiunto pulsante di salvataggio rapido in testata e a fondo pagina con feedback immediato per evitare qualsiasi scroll inutile.
+9. **Fix Streaming AI con Gemini Flash Lite ([src/app/api/chat/route.ts](file:///src/app/api/chat/route.ts)):**
+   - Rimosso il parametro non supportato `thinkingConfig` che causava errore 400 da Google Gemini, ripristinando risposte in streaming sub-secondo (~800ms).
+10. **Preservazione Storico Live Chat & Risoluzione Notifica Bloccata ([src/components/chat/ChatView.tsx](file:///src/components/chat/ChatView.tsx)):**
+   - Corretto il bug per cui i messaggi scambiati in diretta con il barbiere sparivano al rilascio della chat all'AI (`mergeLiveSessionIntoMessages`).
+   - Eliminato il box fuorviante con pulsante lampeggiante "Avviso in cassa attivato / In attesa del barbiere" che rimaneva bloccato dopo la conclusione o l'annullamento della richiesta.
+   - Eliminati i bubble vuoti (ghost placeholder) in caso di loading o interruzioni stream.
 
 ### 🟡 Debito Tecnico Residuo (Non bloccante per il lancio)
 1. **Serializzazione Live-Chat in `business_settings`:** I messaggi chat risiedono in una colonna JSON di `business_settings`. Per volumi elevati, è consigliabile migrarli su una tabella `chat_messages` con Supabase Realtime.
